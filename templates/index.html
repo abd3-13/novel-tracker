@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html class="dark" data-bs-theme="dark">
+<head>
+  <title>Novel Tracker</title>
+  <link href="{{ url_for('static', filename='DataTables/datatables.min.css') }}" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='novel_tracker.css') }}">
+  <meta name="viewport" content="width=device-width" />
+</head>
+
+<body>
+
+<header class="app-header">
+  <h2 id="title">📚 Novel Tracker  <div id="tile_server_stat"></div></h2>
+  <nav class="header-actions">
+      <button id="btn-add" type="button">➕ Add Novel</button>
+      <button id="btn-updall" type="button">🔄 Bulk Ops</button>
+      <button id="btn-scan-files" onclick="scanNewFiles()">📂 Scan Files</button>
+      <button id="btn-sett" type="button">🛠️</button>
+  </nav>
+</header>
+
+<!-- id, name, url, localchap, onlinechap, latestchaptime, status, source, notes  -->
+
+
+<main class="main-body">
+  <table id="table" class="compact hover row-border" >
+    <thead>
+      <tr><th>ID </th><th>Name</th><th>Local</th><th>Online</th><th>Diff</th><th>When</th><th>Source</th><th>Status</th><th>Notes</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+      <!-- Empty: DataTables will populate via AJAX -->
+    </tbody>
+  </table>
+</main>
+
+<!-- Add Modal -->
+<div id="addModal" class="modal">
+  <div class="modal-content">
+    <h3>Add Novel</h3>
+    <form id="addForm" method="POST" action="{{ url_for('add') }}">
+      <label>Name</label><input name="name" placeholder="Name" required>
+      <label>URL</label><input name="url" placeholder="WebNovel URL" required>
+      <label>Local Chapter</label><input name="localchap" type="number" value=0 placeholder="Local Chap">
+      <label>Online Chapter</label><input name="onlinechap" type="number" value=0 placeholder="Online Chap">
+      <label>Source</label><input name="source" placeholder="Source">
+      <label>Status</label><input name="status" placeholder="Status">
+      <label>Notes</label><input name="notes" placeholder="Notes">
+
+      <div class="modal-actions">
+        <button type="submit">💾 Add</button>
+        <button type="button" class="btn-close-add">❌ Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal">
+  <div class="modal-content">
+    <h3>Edit Novel <span class="btn-get-epub-info" data-get="all" data-epub="" title="Fetch metadata (title, source, URL, chapters) from the EPUB file">?</span></h3>
+    <form id="editForm" method="POST">
+      <input type="hidden" id="edit-id" name="id">
+      <label>Name <span class="btn-get-epub-info" data-get="title" title="Fetch only the title">?</span></label><input id="input-name" name="name" required>
+      <label>URL <span class="btn-get-epub-info" data-get="url" title="Fetch URL, source, latest chapter">?</span></label><input id="input-url" name="url" required>
+      <label>Local Chapter</label><input id="input-lchap" name="localchap" type="number">
+      <label>Online Chapter</label><input id="input-ochap" name="onlinechap" type="number">
+      <label>Source</label><input id="input-source" name="source">
+      <label>Status</label><input id="input-status" name="status">
+      <label>Notes</label><input id="input-notes" name="notes">
+      <label>File Name</label><input id="input-filepath" name="filepath">
+
+      <div class="modal-actions">
+        <button type="submit">💾 Save</button>
+        <button type="button" class="btn-close-edit">❌ Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Update Modal -->
+<div id="updateModal" class="modal">
+  <div class="modal-content">
+    <h3>Bulk Operations</h3>
+    <div id="last_time_bulk"><p><b>Last Bulk done</b>: {{ settings.get('LAST_BULK_TIME','') }}</p></div>
+    <form id="updateForm" method="POST">
+      <div class="updateModal-checkbox-grid">
+      <label class="mod-form form-lbl lbl-chk lbl-title"><input class="mod-form form-inpt inpt-chk inpt-title" type="checkbox" name="title" value="1" />Get Title from EPUB</label>
+      <label class="mod-form form-lbl lbl-chk lbl-url"><input class="mod-form form-inpt inpt-chk inpt-url" type="checkbox" name="url" value="1" />Get URL from EPUB</label>
+      <label class="mod-form form-lbl lbl-chk lbl-audeco"><input class="mod-form form-inpt inpt-chk inpt-audeco" type="checkbox" name="audeco" value="1" />Get Author,Desc,Cover from EPUB</label>
+      <label class="mod-form form-lbl lbl-chk lbl-cover"><input class="mod-form form-inpt inpt-chk inpt-cover" type="checkbox" name="cover" value="1" />Get Cover file</label>
+      <label class="mod-form form-lbl lbl-chk lbl-check"><input class="mod-form form-inpt inpt-chk inpt-check" type="checkbox" name="checkepub" value="1" />Check for EPUB</label>
+      <label class="mod-form form-lbl lbl-chk lbl-online"><input class="mod-form form-inpt inpt-chk inpt-online" type="checkbox" name="onlinechap" value="1" />Online Chapter and info</label>
+      <label class="mod-form form-lbl lbl-chk lbl-local"><input class="mod-form form-inpt inpt-chk inpt-local" type="checkbox" name="localchap" value="1" />Local Chapter</label>
+      </div>
+      <label class="mod-form form-lbl lbl-id" for="startId">Start ID from (<span class="lbl-inf-txt txt-sm" id="txt-id-max">{{ novels[-1][0] }}</span>):</label><input class="mod-form form-inpt inpt-id" type="number" id="startId" name="startId" value="1" min="1" max="{{ novels[-1][0] }}"/>
+      <label class="mod-form form-lbl lbl-limit" for="limit">Limit to ROW of (<span class="lbl-inf-txt txt-sm" id="txt-limit-max">{{ novels|length }}</span>):</label><input class="mod-form form-inpt inpt-limit" type="number" id="limit" name="limit" value="{{ novels|length }}" />
+      <div class="modal-actions">
+        <button id="updateForm-btn-submit" type="submit">💾 Submit</button>
+        <button type="button" class="btn-close-update">❌ Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settingsModal" class="modal">
+  <div class="modal-content">
+    <h3>⚙️ Settings</h3>
+    <form id="settingsForm" method="POST" action="{{ url_for('settings') }}">
+      <label>Endpoint</label><input type="text" name="ENDPOINT" placeholder="API Endpoint" value="{{ settings.get('ENDPOINT','') }}" required>
+      <label>IMG Endpoint</label><input type="text" name="IMG_ENDPOINT" placeholder="Image Endpoint" value="{{ settings.get('IMG_ENDPOINT','') }}" required>
+      <label>User Agent</label><input type="text" name="USER_AGENT" placeholder="User-Agent String" value="{{ settings.get('USER_AGENT','') }}" required>
+      <label>Delay From (seconds)</label><input type="number" name="DELAY_FROM" value="1" min="1" value="{{ settings.get('DELAY_FROM',1) }}" required>
+      <label>Delay To (seconds)</label><input type="number" name="DELAY_TO" value="3" min="3" value="{{ settings.get('DELAY_TO',3) }}" required>
+      <label>Local EPUB Directory</label><input type="text" name="LOCAL_EPUB_DIR" placeholder="/path/to/epubs" value="{{ settings.get('LOCAL_EPUB_DIR','') }}" required>
+      <label>Cover image Directory</label><input type="text" name="COVER_PATH" placeholder="/path/to/cover" value="{{ settings.get('COVER_PATH','') }}" required>
+      <label>Check Error Link<input type="checkbox" name="CHECK_ERROR_LINK" value="1"  {% if settings.get('CHECK_ERROR_LINK') == '1' %}checked{% endif %} /></label>
+      <label>API Timeout (seconds)</label><input type="number" name="API_TIMEOUT" value="{{ settings.get('API_TIMEOUT',10) }}" value="10" min="10" required>
+      <label>Secret Key</label><input type="text" name="SECERT_KEY" placeholder="Secret Key" value="{{ settings.get('SECERT_KEY','') }}">
+      <div class="modal-actions">
+        <button type="submit">💾 Save</button>
+        <button type="button" class="btn-close-settings">❌ Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- New Files Modal -->
+<div id="newFilesModal" class="modal">
+  <div class="modal-content">
+    <h3>🆕 New Files Found <span class="mod-form txt-info info-span" id="span-newfiles-info"></span></h3>
+    <div id="newFilesList" class="new-files-container"></div>
+
+    <div class="modal-actions">
+      <button onclick="importallEPUB()">📥 Import All</button>
+      <button class="btn-close-newfile" onclick="closeNewFilesModal()">❌ Close</button>
+    </div>
+  </div>
+</div>
+
+<script defer src="{{ url_for('static', filename='DataTables/datatables.min.js') }}"></script>
+<script defer src="{{ url_for('static', filename='novel_tracker.js') }}"></script>
+
+<div id="toast-container"></div>
+
+<script>
+  function showToast(message, category="info") {
+    const container = document.getElementById("toast-container");
+      if (!container) return;
+
+        const toast = document.createElement("div");
+        toast.className = "toast " + category;
+        toast.innerText = message;
+
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 5000);
+        
+        navigator.clipboard.writeText(message).catch(err => {
+        console.error("Clipboard copy failed:", err);
+        });
+  }
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        showToast("{{ message|safe }}", "{{ category }}");
+      {% endfor %}
+      {% endwith %}
+</script>
+</body>
+</html>

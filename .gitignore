@@ -1,0 +1,22 @@
+*.csv
+*.zip
+
+title_match_file.py
+migrate.py
+# Python
+__pycache__/
+*.pyc
+
+# Environment
+.env
+instance/
+*.db
+
+# EPUBs / Local files
+*.epub
+epubs/
+covers/
+
+# OS files
+.DS_Store
+Thumbs.db
