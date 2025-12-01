@@ -103,5 +103,3 @@ I wanted a small, manageable tool to track my reading progress, both for local E
 
 ---
 
-If you like, I can build a **README.md with badges** (license badge, Python version badge, GitHub actions CI badge) — gives a more “professional open-source project” look.
-::contentReference[oaicite:1]{index=1}
