@@ -1,0 +1,62 @@
+.nt-cover-top-overlay {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 30%;
+    background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,.55),
+        rgba(0,0,0,.20),
+        transparent
+    );
+    pointer-events: none;
+}
+
+.nt-meta-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .25rem;
+
+    color: rgba(255,255,255,.95);
+    font-size: .72rem;
+    font-weight: 600;
+
+    text-shadow: 0 1px 2px rgba(0,0,0,.85);
+}
+
+.nt-meta-item i {
+    font-size: .85rem;
+}
+
+.nt-meta-item span {
+    white-space: nowrap;
+}
+
+/* ==========================================================
+   Filter Panel
+   ========================================================== */
+
+#library-filter-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+#library-filter-panel .offcanvas-body {
+    flex: 1;
+    overflow-y: auto;
+}
+
+#library-filter-panel .filter-footer {
+    display: flex;
+    gap: .75rem;
+
+    padding: 1rem;
+
+    border-top: 1px solid var(--tblr-border-color);
+
+    background: var(--tblr-bg-surface);
+}
+
+#library-filter-panel .filter-footer .btn {
+    flex: 1;
+}

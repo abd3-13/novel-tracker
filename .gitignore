@@ -1,0 +1,49 @@
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon\r
+Desktop.ini
+
+# Editor backup and temp files
+*~
+*.swp
+*.swo
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+.venv/
+*.pyc
+
+
+# Build and distribution
+dist/
+build/
+out/
+coverage/
+*.log
+
+# IDEs and editors
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+*.suo
+*.user
+*.userosscache
+*.goutputstream-
+
+# Other files
+*.db
+*.webp
+data/
