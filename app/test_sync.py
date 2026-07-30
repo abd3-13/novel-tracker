@@ -10,7 +10,7 @@ import app.utils.db as db
 from app.sync.context import SyncContext
 from app.sync.engine import SyncEngine
 from app.sync.job import SyncJob
-from app.sync.providers import LocalProvider
+from app.sync.providers import OnlineProvider
 
 
 def print_provider(provider):
@@ -96,8 +96,15 @@ def main():
 
     job = SyncJob(
         table="demo_novels",
-        source="local",
-        fields=["title", "author", "description", "localchap"],
+        source="online",
+        fields=[
+            "author",
+            "description",
+            "onlinechap",
+            "latestchaptime",
+            "status",
+            "online_characters",
+        ],
         mode="overwrite",
     )
 
@@ -107,7 +114,7 @@ def main():
     # Test Local Provider
     # ----------------------------------------------------------
 
-    print_provider(LocalProvider(ctx))
+    print_provider(OnlineProvider(ctx))
     test_engine(job, novel)
 
 

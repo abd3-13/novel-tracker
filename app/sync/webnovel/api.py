@@ -48,6 +48,8 @@ class NovelInfo:
     author: str
     description: str
     status: str
+    title: str | None = None
+    cover: Optional[str] = None
 
 
 @dataclass(slots=True)
@@ -99,13 +101,15 @@ class WebnovelClient:
             raise ValueError("Missing 'Data' in API response.")
 
         return NovelInfo(
+            title=data.get("BookName"),
             chapter=int(data.get("ChapterNum", 0)),
             chapter_time=epochtohuman(data["LastChapterTime"])
             if data.get("LastChapterTime")
             else None,
             author=data.get("AuthorInfo", {}).get("AuthorName", "Unknown"),
             description=data.get("Description", ""),
-            status={30: "Ongoing", 50: "Completed"}.get(data.get("Status"), "Unknown"),
+            status=determine_status(data.get("LastChapterTime")),
+            cover=f"{book_id}.webp",
         )
 
     def enrich_from_web(self, novel: dict, book_id: str) -> None:

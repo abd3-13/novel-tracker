@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any
 
 import app.utils.db as db
+from app.sync.webnovel.api import WebnovelClient
 
 from .services import (
     count_local_characters,
@@ -9,6 +10,8 @@ from .services import (
     extract_local_chap,
     get_epub_metadata,
 )
+
+_client = WebnovelClient()
 
 # =============================================================================
 # Base Provider
@@ -126,12 +129,43 @@ class OnlineProvider(BaseProvider):
     """
 
     def load(self) -> None:
-        """
-        Load online metadata.
 
-        Implement later.
-        """
-        pass
+        novel = self.ctx.novel
+
+        url = novel.get("url")
+
+        source = novel.get("source")
+
+        if source != "webnovel":
+            return
+
+        if not url:
+            return
+
+        book_id = _client.extract_book_id(url)
+
+        if not book_id:
+            return
+
+        info = _client.fetch_latest_chapter(book_id)
+
+        self.data = {
+            # Basic
+            "title": info.title,
+            "author": info.author,
+            "description": info.description,
+            "url": url,
+            "source": "webnovel",
+            # Chapters
+            "onlinechap": info.chapter,
+            "latestchaptime": info.chapter_time,
+            # Characters
+            "online_characters": _client.count_online_characters(book_id),
+            # Status
+            "status": info.status,
+            # Cover
+            "cover": info.cover,
+        }
 
 
 # =============================================================================

@@ -97,7 +97,7 @@ def timenow():
 
 def determine_status(latest_chap_time):
     if not latest_chap_time or latest_chap_time == "0":
-        return None
+        return "Unknown"
 
     return "Ongoing" if time_difference(latest_chap_time) <= 30 else "Hiatus"
 

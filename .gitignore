@@ -47,3 +47,4 @@ coverage/
 *.db
 *.webp
 data/
+epub_error.txt

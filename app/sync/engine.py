@@ -158,3 +158,17 @@ class SyncEngine:
             self.db.update_novel(ctx.novel["id"], updates, table=ctx.job.table)
 
         ctx.result = updates
+
+
+class BulkRunner:
+    def __init__(self, db):
+        self.engine = SyncEngine(db)
+
+    def run(self, job, novels):
+
+        results = []
+
+        for novel in novels:
+            results.append(self.engine.run(job, novel))
+
+        return results
