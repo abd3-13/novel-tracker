@@ -48,3 +48,5 @@ class SyncJob:
 
     # Display name (UI / logging)
     profile: str = "Synchronization"
+
+    debug: bool = False

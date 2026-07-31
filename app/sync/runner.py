@@ -1,0 +1,160 @@
+"""
+Bulk synchronization runner.
+
+Responsibilities
+
+- Select novels to synchronize
+- Execute SyncEngine
+- Track progress
+- Collect results
+- Handle per-novel failures
+
+This class contains no synchronization logic.
+"""
+
+import app.utils.db as db
+
+from .engine import SyncEngine
+from .selector import BulkSelector
+
+
+class SyncRunner:
+    """
+    Executes synchronization jobs.
+    """
+
+    def __init__(self):
+
+        self.engine = SyncEngine(db)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def run(self, job):
+        """
+        Execute a synchronization job.
+        """
+
+        novels = self._select(job)
+
+        total = len(novels)
+
+        results = []
+
+        self._on_start(total)
+
+        for current, novel in enumerate(novels, start=1):
+            self._on_progress(
+                current,
+                total,
+                novel,
+            )
+
+            try:
+                result = self.engine.run(
+                    job,
+                    novel,
+                )
+
+            except Exception as e:
+                result = self._error_result(
+                    novel,
+                    e,
+                )
+
+            results.append(result)
+
+        self._on_finish(results)
+
+        return results
+
+    def preview(self, job):
+        """
+        Return novels that would be synchronized.
+        """
+
+        return self._select(job)
+
+    # ------------------------------------------------------------------
+    # Selection
+    # ------------------------------------------------------------------
+
+    def _select(self, job):
+        """
+        Select novels according to the SyncJob.
+        """
+
+        selector = BulkSelector(
+            table=job.table,
+        )
+
+        # Explicit IDs
+        if job.novels:
+            return selector.ids(job.novels)
+
+        # Filter by source
+        if "source" in job.options:
+            return selector.source(
+                job.options["source"],
+            )
+
+        # Filter by status
+        if "status" in job.options:
+            return selector.status(
+                job.options["status"],
+            )
+
+        # Custom WHERE clause
+        if "where" in job.options:
+            return selector.where(
+                job.options["where"],
+                job.options.get("params", ()),
+            )
+
+        # Default
+        return selector.all()
+
+    # ------------------------------------------------------------------
+    # Progress
+    # ------------------------------------------------------------------
+
+    def _on_start(self, total):
+        """
+        Called before synchronization begins.
+        """
+
+        print(f"\nStarting synchronization ({total} novels)\n")
+
+    def _on_progress(self, current, total, novel):
+        """
+        Called before synchronizing a novel.
+        """
+
+        print(f"[{current}/{total}] {novel['name']}")
+
+    def _on_finish(self, results):
+        """
+        Called after synchronization completes.
+        """
+
+        success = sum(1 for r in results if "error" not in r)
+
+        failed = len(results) - success
+
+        print(f"\nFinished ({success} succeeded, {failed} failed)")
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _error_result(self, novel, error):
+        """
+        Convert an exception into a result object.
+        """
+
+        return {
+            "id": novel["id"],
+            "title": novel["name"],
+            "error": str(error),
+        }

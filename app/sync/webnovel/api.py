@@ -100,6 +100,8 @@ class WebnovelClient:
         if not data:
             raise ValueError("Missing 'Data' in API response.")
 
+        novel_status = determine_status(epochtohuman(data["LastChapterTime"]))
+
         return NovelInfo(
             title=data.get("BookName"),
             chapter=int(data.get("ChapterNum", 0)),
@@ -108,7 +110,7 @@ class WebnovelClient:
             else None,
             author=data.get("AuthorInfo", {}).get("AuthorName", "Unknown"),
             description=data.get("Description", ""),
-            status=determine_status(data.get("LastChapterTime")),
+            status=novel_status,
             cover=f"{book_id}.webp",
         )
 
@@ -120,7 +122,9 @@ class WebnovelClient:
                 "latestchaptime": info.chapter_time,
                 "author": info.author,
                 "description": info.description,
-                "status": determine_status(info.chapter_time),
+                "status": info.status,
+                "name": info.title,
+                "cover": info.cover,
             }
         )
 

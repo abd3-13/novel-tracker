@@ -98,8 +98,8 @@ def timenow():
 def determine_status(latest_chap_time):
     if not latest_chap_time or latest_chap_time == "0":
         return "Unknown"
-
-    return "Ongoing" if time_difference(latest_chap_time) <= 30 else "Hiatus"
+    time_diff = time_difference(latest_chap_time)
+    return "Ongoing" if time_diff <= 30 else "Hiatus"
 
 
 def normalize_tags(tag_string: str) -> str:

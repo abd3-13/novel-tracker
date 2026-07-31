@@ -55,11 +55,34 @@ def generic_sync(ctx, field: MetadataField):
         field.column,
     )
 
-    if not SyncStrategy.should_update(
+    update = SyncStrategy.should_update(
         ctx.job.mode,
         current_value,
         new_value,
-    ):
+    )
+
+    # ----------------------------
+    # Debug
+    # ----------------------------
+
+    if ctx.job.debug:
+        action = "UPDATE" if update else "SKIP"
+
+        if current_value == new_value:
+            action = "="
+
+        print(
+            f"{field.column:25}"
+            f"{str(current_value)[:40]:40}"
+            f"{str(new_value)[:40]:40}"
+            f"{action}"
+        )
+
+    # ----------------------------
+    # Sync
+    # ----------------------------
+
+    if not update:
         return
 
     ctx.collector.set(

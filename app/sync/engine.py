@@ -98,6 +98,12 @@ class SyncEngine:
         """
         Synchronize all requested metadata fields.
         """
+        if ctx.job.debug:
+            print("\n================ Metadata Comparison ================\n")
+
+            print(f"{'Field':25}{'Database':40}{'Provider':40}Action")
+
+            print("-" * 120)
 
         for field_name in ctx.job.fields:
             field = FIELDS.get(field_name)
@@ -159,16 +165,11 @@ class SyncEngine:
 
         ctx.result = updates
 
+    def _debug_field(self, name, current, new, update):
 
-class BulkRunner:
-    def __init__(self, db):
-        self.engine = SyncEngine(db)
+        action = "UPDATE" if update else "SKIP"
 
-    def run(self, job, novels):
+        if current == new:
+            action = "="
 
-        results = []
-
-        for novel in novels:
-            results.append(self.engine.run(job, novel))
-
-        return results
+        print(f"{name:25}{str(current)[:35]:35}{str(new)[:35]:35}{action}")

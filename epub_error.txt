@@ -1,5 +1,0 @@
-count_local_characters: /media/ExtSD/Documents/500Th Time Reborn A World Only Known By Women The c570.epub : Working outside of application context.
-
-This typically means that you attempted to use functionality that needed
-the current application. To solve this, set up an application context
-with app.app_context(). See the documentation for more information.
