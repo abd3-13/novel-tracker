@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any, Callable  # noqa: UP035
 
 from .strategy import SyncStrategy
 
@@ -55,40 +55,31 @@ def generic_sync(ctx, field: MetadataField):
         field.column,
     )
 
-    update = SyncStrategy.should_update(
+    should_update = SyncStrategy.should_update(
         ctx.job.mode,
         current_value,
         new_value,
     )
 
-    # ----------------------------
-    # Debug
-    # ----------------------------
-
-    if ctx.job.debug:
-        action = "UPDATE" if update else "SKIP"
-
-        if current_value == new_value:
-            action = "="
-
-        print(
-            f"{field.column:25}"
-            f"{str(current_value)[:40]:40}"
-            f"{str(new_value)[:40]:40}"
-            f"{action}"
-        )
-
+    ctx.logger.field(
+        field.column,
+        current_value,
+        new_value,
+        should_update,
+    )
     # ----------------------------
     # Sync
     # ----------------------------
 
-    if not update:
+    if not should_update:
         return
 
     ctx.collector.set(
         field.column,
         new_value,
     )
+
+    ctx.logger.debug(f"Queued update: {field.column}")
 
 
 # =============================================================================

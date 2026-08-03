@@ -48,3 +48,4 @@ coverage/
 *.webp
 data/
 epub_error.txt
+app/static/img/

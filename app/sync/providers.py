@@ -1,13 +1,12 @@
 from pathlib import Path
 from typing import Any
 
-import app.utils.db as db
 from app.sync.webnovel.api import WebnovelClient
+from app.utils import db
 
 from .services import (
     count_local_characters,
     extract_epub_cover,
-    extract_local_chap,
     get_epub_metadata,
 )
 
@@ -36,7 +35,6 @@ class BaseProvider:
 
         Implemented by subclasses.
         """
-        pass
 
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -71,9 +69,12 @@ class LocalProvider(BaseProvider):
 
         novel = self.ctx.novel
 
+        self.ctx.logger.debug(f"Loading local metadata: {novel['name']}")
+
         epub_path = novel.get("filepath")
 
         if not epub_path:
+            self.ctx.logger.warning(f"{novel['name']} has no EPUB file.")
             return
 
         # ---------------------------------------------------------
@@ -82,32 +83,23 @@ class LocalProvider(BaseProvider):
 
         meta = get_epub_metadata(epub_path)
 
-        chapters, last_title, last_file = extract_local_chap(epub_path)
-
         # ---------------------------------------------------------
         # Build provider data
         # ---------------------------------------------------------
 
         self.data = {
             # Basic
-            "title": meta.get("title"),
-            "author": meta.get("author"),
-            "description": meta.get("description"),
-            "url": meta.get("url"),
-            "source": meta.get("source"),
-            # Chapters
-            "localchap": chapters,
-            "local_lastchaptitle": last_title,
-            "local_lastchapfile": last_file,
-            # Characters
-            "characters": count_local_characters(epub_path),
-            # Cover
-            "cover": extract_epub_cover(
-                epub_path=epub_path,
-                getfrom="local",
-                meta=meta,
-            ),
-            # Progress
+            "title": meta.title,
+            "author": meta.author,
+            "description": meta.description,
+            "url": meta.url,
+            "source": meta.source,
+            "localchap": meta.chapters,
+            "local_lastchaptitle": meta.last_title,
+            "local_lastchapfile": meta.last_file,
+            "characters": meta.characters or count_local_characters(epub_path),
+            "cover": meta.cover_id or extract_epub_cover(epub_path),
+            # TODO: Add support for progress tracking in local EPUBs with Moonreader
             "progress": None,
             "progress_updated": None,
             # File
@@ -116,6 +108,8 @@ class LocalProvider(BaseProvider):
                 Path(db.get_value("LOCAL_EPUB_DIR") or "./") / epub_path
             ).exists(),
         }
+
+        self.ctx.logger.debug(f"Local provider loaded {len(self.data)} fields.")
 
 
 # =============================================================================
@@ -132,6 +126,8 @@ class OnlineProvider(BaseProvider):
 
         novel = self.ctx.novel
 
+        self.ctx.logger.debug(f"Loading online metadata: {novel['name']}")
+
         url = novel.get("url")
 
         source = novel.get("source")
@@ -145,9 +141,12 @@ class OnlineProvider(BaseProvider):
         book_id = _client.extract_book_id(url)
 
         if not book_id:
+            self.ctx.logger.warning(f"No WebNovel book id for '{novel['name']}'")
             return
 
         info = _client.fetch_latest_chapter(book_id)
+
+        self.ctx.logger.debug(f"Fetched WebNovel metadata ({book_id})")
 
         self.data = {
             # Basic
@@ -166,6 +165,8 @@ class OnlineProvider(BaseProvider):
             # Cover
             "cover": info.cover,
         }
+
+        self.ctx.logger.debug(f"Online provider loaded {len(self.data)} fields.")
 
 
 # =============================================================================
@@ -215,7 +216,9 @@ class ProviderManager:
         """
         Load all registered providers.
         """
-        for provider in self._providers.values():
+        for name, provider in self._providers.items():
+            provider.ctx.logger.debug(f"Loading provider '{name}'")
+
             provider.load()
 
     # -------------------------------------------------------------------------
@@ -239,10 +242,9 @@ class ProviderManager:
 
         attribute = field.sources.get(source)
 
-        if attribute is None:
-            return None
+        value = provider.get(attribute)
 
-        return provider.get(attribute)
+        return value
 
     def get_value_from(self, source: str, field):
         """

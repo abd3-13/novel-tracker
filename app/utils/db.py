@@ -369,6 +369,8 @@ def build_base_novel():
         "cover_path": None,
         "local_lastchaptitle": None,
         "local_lastchapfile": None,
+        "characters": 0,
+        
     }
 
 

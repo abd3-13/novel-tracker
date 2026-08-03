@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from .logger import LogLevel  # type: ignore
+
 
 class SyncSource:
     AUTO = "auto"
@@ -49,4 +51,5 @@ class SyncJob:
     # Display name (UI / logging)
     profile: str = "Synchronization"
 
-    debug: bool = False
+    # Logging level
+    log_level: LogLevel = LogLevel.NORMAL

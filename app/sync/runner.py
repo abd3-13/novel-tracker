@@ -12,9 +12,10 @@ Responsibilities
 This class contains no synchronization logic.
 """
 
-import app.utils.db as db
+from app.utils import db
 
 from .engine import SyncEngine
+from .logger import SyncLogger  # type: ignore
 from .selector import BulkSelector
 
 
@@ -26,6 +27,7 @@ class SyncRunner:
     def __init__(self):
 
         self.engine = SyncEngine(db)
+        self.logger = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -35,6 +37,7 @@ class SyncRunner:
         """
         Execute a synchronization job.
         """
+        self.logger = SyncLogger(level=job.log_level)
 
         novels = self._select(job)
 
@@ -57,11 +60,9 @@ class SyncRunner:
                     novel,
                 )
 
-            except Exception as e:
-                result = self._error_result(
-                    novel,
-                    e,
-                )
+            except Exception as e:  # noqa: BLE001
+                self.logger.error(f"{novel['name']}: {e}")
+                result = self._error_result(novel, e)
 
             results.append(result)
 
@@ -124,25 +125,32 @@ class SyncRunner:
         Called before synchronization begins.
         """
 
-        print(f"\nStarting synchronization ({total} novels)\n")
+        assert self.logger is not None
+        self.logger.info(f"\nStarting synchronization ({total} novels)\n")
 
     def _on_progress(self, current, total, novel):
         """
         Called before synchronizing a novel.
         """
 
-        print(f"[{current}/{total}] {novel['name']}")
+        assert self.logger is not None
+        self.logger.progress(current, total, novel["name"])
 
     def _on_finish(self, results):
         """
         Called after synchronization completes.
         """
 
-        success = sum(1 for r in results if "error" not in r)
+        updated = sum(1 for r in results if r and "error" not in r and r)
 
-        failed = len(results) - success
+        failed = sum(1 for r in results if r and "error" in r)
 
-        print(f"\nFinished ({success} succeeded, {failed} failed)")
+        skipped = len(results) - updated - failed
+
+        assert self.logger is not None
+        self.logger.summary(
+            processed=len(results), updated=updated, skipped=skipped, errors=failed
+        )
 
     # ------------------------------------------------------------------
     # Helpers

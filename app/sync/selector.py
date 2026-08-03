@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-import app.utils.db as db
+from app.utils import db
 
 
 @dataclass(slots=True)

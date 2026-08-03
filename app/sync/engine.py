@@ -1,5 +1,6 @@
 from .collector import SyncCollector
 from .context import SyncContext
+from .logger import SyncLogger  # type: ignore
 from .metadata import FIELDS
 from .providers import (
     LocalProvider,
@@ -37,6 +38,8 @@ class SyncEngine:
 
         ctx = self._create_context(job, novel)
 
+        ctx.logger.job(job.profile)
+
         self._register_providers(ctx)
 
         self._load_providers(ctx)
@@ -58,6 +61,8 @@ class SyncEngine:
 
         ctx = SyncContext(job, novel)
 
+        ctx.logger = SyncLogger(level=job.log_level)
+
         ctx.collector = SyncCollector()
 
         ctx.providers = ProviderManager()
@@ -72,12 +77,13 @@ class SyncEngine:
         """
         Register available metadata providers.
         """
+        ctx.logger.provider("local")
 
         ctx.providers.register(
             "local",
             LocalProvider(ctx),
         )
-
+        ctx.logger.provider("online")
         ctx.providers.register(
             "online",
             OnlineProvider(ctx),
@@ -98,12 +104,6 @@ class SyncEngine:
         """
         Synchronize all requested metadata fields.
         """
-        if ctx.job.debug:
-            print("\n================ Metadata Comparison ================\n")
-
-            print(f"{'Field':25}{'Database':40}{'Provider':40}Action")
-
-            print("-" * 120)
 
         for field_name in ctx.job.fields:
             field = FIELDS.get(field_name)
@@ -152,24 +152,9 @@ class SyncEngine:
 
         updates = ctx.collector.as_dict()
 
-        print("\n===== SyncCollector =====")
-
-        if not updates:
-            print("No updates.")
-        else:
-            for k, v in updates.items():
-                print(f"{k:25} : {v}")
+        ctx.logger.collector(updates)
 
         if updates:
             self.db.update_novel(ctx.novel["id"], updates, table=ctx.job.table)
 
         ctx.result = updates
-
-    def _debug_field(self, name, current, new, update):
-
-        action = "UPDATE" if update else "SKIP"
-
-        if current == new:
-            action = "="
-
-        print(f"{name:25}{str(current)[:35]:35}{str(new)[:35]:35}{action}")
