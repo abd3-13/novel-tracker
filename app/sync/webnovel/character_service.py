@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from app.utils.tools import (
 
 from .api import CharacterInfo, WebnovelClient
 
+logger = logging.getLogger(__name__)
 _client = WebnovelClient()
 
 
@@ -70,7 +72,7 @@ class CharacterFetchState:
 
 def fetch_characters(
     *,
-    book_id: str,
+    book_id: str | None = None,
     output_dir: Path,
     delay: float = 1.0,
     overwrite: bool = False,
@@ -81,6 +83,16 @@ def fetch_characters(
     Workflow
       Character list > Character details > Retry failed details > Download images > Retry failed images > Write JSON/TXT > Return summary
     """
+    if not book_id:
+        raise CharacterFetchError("Book ID is required to fetch characters.")
+
+    logger.info("Initializing character fetch...")
+    output_dir = Path(output_dir)
+    if output_dir.suffix:
+        output_dir = output_dir.with_suffix("")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    logger.info("Character output directory: %s", output_dir)
+
     state = CharacterFetchState(
         book_id=book_id,
         output_dir=output_dir,
@@ -88,13 +100,18 @@ def fetch_characters(
         overwrite=overwrite,
         dry_run=dry_run,
     )
-    output_dir.mkdir(parents=True, exist_ok=True)
+    logger.info("Loading character list...")
     _load_character_list(state)
+    logger.info("Fetching character details...")
     _fetch_character_details(state)
+    logger.info("Retrying failed details...")
     _retry_failed_details(state)
+    logger.info("Downloading images...")
     _download_images(state)
+    logger.info("Retrying failed images...")
     _retry_failed_images(state)
     if not dry_run:
+        logger.info("Writing output files...")
         _write_outputs(state)
     return _build_summary(state)
 
@@ -175,7 +192,8 @@ def _download_images(state: CharacterFetchState) -> None:
         if image is None:
             task.image_failed = True
             continue
-        task.image_path = convert_to_webp(image)
+        image_path = state.output_dir / filename
+        task.image_path = convert_to_webp(image_path)
         task.image_downloaded = True
         state.downloaded += 1
 
@@ -208,7 +226,8 @@ def _retry_failed_images(state: CharacterFetchState) -> None:
             )
             if image is None:
                 continue
-            task.image_path = convert_to_webp(image)
+            image_path = state.output_dir / filename
+            task.image_path = convert_to_webp(image_path)
             task.image_failed = False
             task.image_downloaded = True
             state.downloaded += 1

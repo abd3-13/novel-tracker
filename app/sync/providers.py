@@ -1,14 +1,14 @@
 from pathlib import Path
 from typing import Any
 
-from app.sync.webnovel.api import WebnovelClient
-from app.utils import db
-
-from .services import (
-    count_local_characters,
+from app.sync.services import (
     extract_epub_cover,
     get_epub_metadata,
+    get_moonreader_progress,
 )
+from app.sync.webnovel.api import WebnovelClient
+from app.sync.webnovel.character_service import fetch_characters as WN_fetch_characters
+from app.utils import db
 
 _client = WebnovelClient()
 
@@ -54,6 +54,12 @@ class BaseProvider:
         """
         self.data.clear()
 
+    def fetch_cover(self):
+        raise NotImplementedError
+
+    def fetch_characters(self):
+        raise NotImplementedError
+
 
 # =============================================================================
 # Local Provider
@@ -81,28 +87,29 @@ class LocalProvider(BaseProvider):
         # Basic EPUB metadata
         # ---------------------------------------------------------
 
-        meta = get_epub_metadata(epub_path)
+        self.meta = get_epub_metadata(epub_path)
+
+        # ---------------------------------------------------------
+        # MoonReader progress
+        # ---------------------------------------------------------
+        progress = get_moonreader_progress(epub_path)
 
         # ---------------------------------------------------------
         # Build provider data
         # ---------------------------------------------------------
 
         self.data = {
-            # Basic
-            "title": meta.title,
-            "author": meta.author,
-            "description": meta.description,
-            "url": meta.url,
-            "source": meta.source,
-            "localchap": meta.chapters,
-            "local_lastchaptitle": meta.last_title,
-            "local_lastchapfile": meta.last_file,
-            "characters": meta.characters or count_local_characters(epub_path),
-            "cover": meta.cover_id or extract_epub_cover(epub_path),
-            # TODO: Add support for progress tracking in local EPUBs with Moonreader
-            "progress": None,
-            "progress_updated": None,
-            # File
+            "title": self.meta.title,
+            "author": self.meta.author,
+            "description": self.meta.description,
+            "url": self.meta.url,
+            "source": self.meta.source,
+            "localchap": self.meta.chapters,
+            "local_lastchaptitle": self.meta.last_title,
+            "local_lastchapfile": self.meta.last_file,
+            "characters": self.meta.characters,
+            "cover": self.meta.cover_id,
+            "progress": progress.chapter,
             "filepath": epub_path,
             "epub_exists": (
                 Path(db.get_value("LOCAL_EPUB_DIR") or "./") / epub_path
@@ -110,6 +117,24 @@ class LocalProvider(BaseProvider):
         }
 
         self.ctx.logger.debug(f"Local provider loaded {len(self.data)} fields.")
+
+    def fetch_cover(self):
+        """
+        Fetch the cover image from the EPUB.
+        """
+
+        epub_file = self.ctx.novel.get("filepath")
+
+        self.ctx.logger.info("Fetching local cover...")
+
+        cover = extract_epub_cover(epub_file)
+
+        if cover:
+            self.ctx.logger.info(f"Cover ready: {cover}")
+        else:
+            self.ctx.logger.warning("Cover extraction failed.")
+
+        return cover
 
 
 # =============================================================================
@@ -121,6 +146,9 @@ class OnlineProvider(BaseProvider):
     """
     Provides metadata from the online source.
     """
+
+    def _book_id(self):
+        return _client.extract_book_id(self.ctx.novel.get("url", ""))
 
     def load(self) -> None:
 
@@ -138,7 +166,7 @@ class OnlineProvider(BaseProvider):
         if not url:
             return
 
-        book_id = _client.extract_book_id(url)
+        book_id = self._book_id()
 
         if not book_id:
             self.ctx.logger.warning(f"No WebNovel book id for '{novel['name']}'")
@@ -164,9 +192,47 @@ class OnlineProvider(BaseProvider):
             "status": info.status,
             # Cover
             "cover": info.cover,
+            "filepath": novel.get("filepath"),
         }
 
         self.ctx.logger.debug(f"Online provider loaded {len(self.data)} fields.")
+
+    def fetch_cover(self):
+        """
+        Fetch the cover image from the online source.
+        """
+
+        self.ctx.logger.info("Fetching online cover...")
+
+        cover = _client.fetch_cover_image(self._book_id())
+
+        if cover:
+            self.ctx.logger.info(f"Cover ready: {cover}")
+        else:
+            self.ctx.logger.warning("Failed to fetch cover.")
+
+        return cover
+
+    def fetch_characters(self):
+        """
+        Fetch the list of characters from the online source.
+        """
+
+        self.ctx.logger.info("Fetching characters...")
+
+        epub_file = self.ctx.novel.get("filepath")
+
+        output_dir = Path(db.get_value("LOCAL_EPUB_DIR") or "./") / epub_file
+
+        result = WN_fetch_characters(book_id=self._book_id(), output_dir=output_dir)
+
+        self.ctx.logger.info(
+            f"Characters: {result['characters']} "
+            f"Downloaded: {result['downloaded']} "
+            f"Failed: {result['failed']}"
+        )
+
+        return result
 
 
 # =============================================================================
@@ -212,14 +278,27 @@ class ProviderManager:
     # Loading
     # -------------------------------------------------------------------------
 
+    def load(self, source: str) -> None:
+        """
+        Load a single provider.
+        """
+
+        provider = self.get_provider(source)
+
+        if provider is None:
+            raise ValueError(f"No provider registered for '{source}'")
+
+        provider.ctx.logger.debug(f"Loading provider '{source}'")
+
+        provider.load()
+
     def load_all(self) -> None:
         """
         Load all registered providers.
         """
-        for name, provider in self._providers.items():
-            provider.ctx.logger.debug(f"Loading provider '{name}'")
 
-            provider.load()
+        for source in self._providers:
+            self.load(source)
 
     # -------------------------------------------------------------------------
     # Value lookup

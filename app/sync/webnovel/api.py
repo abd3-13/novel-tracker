@@ -5,11 +5,13 @@ import random
 import re
 import time
 from dataclasses import dataclass
-from typing import Any, Optional
+from pathlib import Path
+from typing import Any
 
 import requests
 
-import app.utils.db as db
+from app.utils import db
+from app.utils.images import download_image
 from app.utils.tools import (
     determine_status,
     epochtohuman,
@@ -22,11 +24,12 @@ logger = logging.getLogger(__name__)
 
 MAX_TIMEOUT = int(db.get_value("API_TIMEOUT") or 10)
 
-API_BASE = "https://idruid.webnovel.com/go/api/book-role"
+API_BASE = db.get_value("CHARAC_API")
+IMG_ENDPOINT = db.get_value("IMG_ENDPOINT")
 
 CHARACTER_HEADERS = {
-    "User-Agent": "Mozilla/mobile QDHWReaderAndroid/8.15.3/1153/2000002/ffffffff95ab80ef0000000073051a64",
-    "Referer": "https://android.webnovel.com",
+    "User-Agent": db.get_value("USER_AGENT"),
+    "Referer": db.get_value("REFER_URL"),
     "arcane": "001030brn5eb4rAuzLLDkrMV01qxQrbDmK0wsxXjcxcJwojV95Br0af+FCtWlRsQolF/2HmbHo7jOaKWHuSxjjFexOlUf9zF6LGQLGyGnTv5I9Boj+pzAmOC5wPQEZ2r6RYrHaqvmQ/rt+AqyqHRxWMa5zOv540mOGSz/U143WnI8j/ag=",
 }
 
@@ -44,12 +47,12 @@ class NetworkError(Exception):
 @dataclass(slots=True)
 class NovelInfo:
     chapter: int
-    chapter_time: Optional[str]
+    chapter_time: str | None
     author: str
     description: str
     status: str
     title: str | None = None
-    cover: Optional[str] = None
+    cover: str | None = None
 
 
 @dataclass(slots=True)
@@ -68,7 +71,7 @@ class WebnovelClient:
     def __init__(self) -> None:
         self.session = requests.Session()
 
-    def extract_book_id(self, url: str) -> Optional[str]:
+    def extract_book_id(self, url: str) -> str | None:
         for pattern in BOOK_ID_PATTERNS:
             m = pattern.search(url)
             if m:
@@ -150,9 +153,7 @@ class WebnovelClient:
     def count_online_characters(self, book_id: str) -> int:
         return len(self.get_character_list(book_id))
 
-    def get_character_detail(
-        self, book_id: str, role_id: str
-    ) -> Optional[CharacterInfo]:
+    def get_character_detail(self, book_id: str, role_id: str) -> CharacterInfo | None:
         data = http_get(
             f"{API_BASE}/detail",
             {"bookId": book_id, "roleId": role_id},
@@ -162,6 +163,33 @@ class WebnovelClient:
         if not data or data.get("Message") != "Success":
             return None
         return normalize_character(data)
+
+    def fetch_cover_image(self, book_id: str | None) -> str | None:
+        """
+        Download the WebNovel cover image.
+        """
+
+        if not book_id:
+            logger.warning("Cannot fetch cover without book id.")
+            return None
+
+        logger.debug("Downloading cover for %s", book_id)
+
+        url = f"{IMG_ENDPOINT}/cover?bookId={book_id}"
+
+        cover = download_image(
+            url=url,
+            filename=f"{book_id}.webp",
+            folder=Path(db.get_value("COVER_PATH") or "./"),
+            dry_run=False,
+        )
+
+        if cover:
+            logger.info("Downloaded cover: %s", cover)
+        else:
+            logger.warning("Cover download failed: %s", book_id)
+
+        return cover
 
 
 def normalize_character(data: dict) -> CharacterInfo:

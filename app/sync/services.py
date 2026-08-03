@@ -1,5 +1,7 @@
 import logging
+import os
 import re
+import xml.etree.ElementTree as ET
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,6 +10,7 @@ import tldextract
 from ebooklib import epub
 
 from app.utils import db
+from app.utils.tools import normalize_filename
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +27,8 @@ BOOK_ID_PATTERNS = (
     re.compile(r"/book/(\d{8,})"),
     re.compile(r"(\d{8,})"),
 )
+
+MOON_READER_PROGRESS_PATTERN = re.compile(r"(\d+)@.*?:([\d.]+)%")
 
 
 def extract_book_id(url: str | None = None) -> str | None:
@@ -149,8 +154,8 @@ def _metadata_from_book(book) -> EpubMetadata:
         title=first("DC", "title"),
         identifiers=first("DC", "identifier"),
         chapters=chap,
-        last_file=last_title,
-        last_title=last_file,
+        last_file=last_file,
+        last_title=last_title,
         characters=count_local_characters(book),
     )
 
@@ -190,34 +195,43 @@ def get_epub_metadata(epub_path: str) -> EpubMetadata:
     return _metadata_from_book(book)
 
 
-def extract_epub_cover(epub_path: str, meta: EpubMetadata | None = None) -> str:
+def extract_epub_cover(epub_path: str, cover_id: str | None = None) -> str:
     """
     Extract and save the cover image from a local EPUB file.
-    If `meta` is provided (e.g. already fetched by the caller), it's reused
-    instead of re-parsing the EPUB for metadata.
-    Returns the saved cover filename, or "" if no image was found.
     """
+
+    logger.debug("Opening EPUB: %s", epub_path)
+
     book = _read_epub(epub_path)
 
-    if meta is None:
+    if cover_id is None:
+        logger.debug("Reading EPUB metadata...")
         meta = _metadata_from_book(book)
+        cover_id = meta.cover_id
 
-    cover_id = meta.cover_id or "nocover.webp"
+    cover_id = cover_id or "nocover.webp"
+
     cover_dir = Path(db.get_value("COVER_PATH") or "./covers")
     cover_dir.mkdir(parents=True, exist_ok=True)
+
     cover_path = cover_dir / cover_id
 
-    # cover_id is deterministic per book (see _metadata_from_book), so if the
-    # file's already on disk we can skip re-extracting/re-writing it.
     if cover_path.exists():
+        logger.debug("Cover already exists: %s", cover_path)
         return cover_id
 
+    logger.debug("Extracting cover image...")
+
     cover_data = _extract_cover_bytes(book)
+
     if not cover_data:
         logger.warning("No cover image found in EPUB: %s", epub_path)
         return ""
 
     cover_path.write_bytes(cover_data)
+
+    logger.info("Saved cover: %s", cover_path)
+
     return cover_id
 
 
@@ -295,3 +309,104 @@ def find_missing_epubs() -> list:
     finally:
         conn.close()
     return missing
+
+
+# =============================================================================
+# Moon+ Reader Progress
+# =============================================================================
+
+
+@dataclass(slots=True)
+class ReadingProgress:
+    """
+    Reading progress for a single EPUB.
+    """
+
+    chapter: int | None = None
+
+
+_progress_cache: dict[str, ReadingProgress] | None = None
+_progress_source: str | None = None
+
+
+def _load_progress(xml_path: str | None) -> dict[str, ReadingProgress]:
+    """
+    Load and cache the Moon+ Reader progress database.
+    """
+
+    global _progress_cache
+    global _progress_source
+
+    if _progress_cache is not None and _progress_source == xml_path:
+        logger.debug("Using cached Moon+ Reader progress.")
+        return _progress_cache
+
+    logger.info("Loading Moon+ Reader progress...")
+
+    progress: dict[str, ReadingProgress] = {}
+
+    if not xml_path:
+        logger.warning("Moon+ Reader XML path not configured.")
+        _progress_cache = progress
+        _progress_source = xml_path
+        return progress
+
+    xml_file = Path(xml_path)
+
+    if not xml_file.exists():
+        logger.warning("Moon+ Reader XML not found: %s", xml_file)
+        _progress_cache = progress
+        _progress_source = xml_path
+        return progress
+
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+
+    for node in root.findall("string"):
+        full_path = node.attrib.get("name", "")
+
+        value = (node.text or "").strip()
+
+        filename = normalize_filename(os.path.basename(full_path))
+
+        match = MOON_READER_PROGRESS_PATTERN.match(value)
+
+        if not match:
+            continue
+
+        progress[filename] = ReadingProgress(chapter=int(match.group(1)))
+
+    logger.info("Loaded Moon+ Reader progress for %d books.", len(progress))
+
+    _progress_cache = progress
+    _progress_source = xml_path
+
+    return progress
+
+
+def get_moonreader_progress(
+    epub_filename: str,
+    xml_path: str | None = None,
+) -> ReadingProgress:
+    """
+    Return the reading progress for a single EPUB.
+
+    Progress is cached after the first XML parse.
+    """
+
+    if xml_path is None:
+        xml_path = db.get_value("MOON_PROGRESS_FILE") or ""
+
+    filename = normalize_filename(epub_filename)
+
+    progress = _load_progress(xml_path)
+
+    result = progress.get(filename)
+
+    if result is None:
+        logger.debug("No Moon+ Reader progress found for '%s'.", filename)
+        return ReadingProgress()
+
+    logger.debug("Moon+ Reader progress: %s -> chapter %d", filename, result.chapter)
+
+    return result

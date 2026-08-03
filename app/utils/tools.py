@@ -7,7 +7,7 @@ from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from threading import Lock
-from typing import Any, Dict
+from typing import Any
 from urllib.parse import urlparse
 
 from curl_cffi import requests
@@ -220,18 +220,17 @@ def write_characters_json(characters: list[dict], output_dir: Path):
 
 def write_characters_txt(characters: list[dict], output_dir: Path):
     with open(output_dir / "characters.txt", "w", encoding="utf-8") as f:
-        for char in characters:
-            f.write(character_to_html_line(char) + "\n")
+        f.writelines(character_to_html_line(char) + "\n" for char in characters)
 
 
 def http_get(
     url: str,
-    params: Dict[str, Any] | None = None,
+    params: dict[str, Any] | None = None,
     retries: int = 3,
     initial_delay: float = 2.0,
-    headers: Dict[str, str] | None = None,
+    headers: dict[str, str] | None = None,
     timeout: int = 10,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     delay = initial_delay
 
     for attempt in range(1, retries + 1):

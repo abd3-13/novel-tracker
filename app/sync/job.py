@@ -5,7 +5,6 @@ from .logger import LogLevel  # type: ignore
 
 
 class SyncSource:
-    AUTO = "auto"
     LOCAL = "local"
     ONLINE = "online"
 
@@ -36,7 +35,7 @@ class SyncJob:
     fields: list[str] = field(default_factory=list)
 
     # Preferred metadata source
-    source: str = SyncSource.AUTO
+    source: str = SyncSource.LOCAL
 
     # Update strategy
     mode: str = SyncMode.FILL_MISSING

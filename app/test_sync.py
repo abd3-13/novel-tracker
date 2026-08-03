@@ -8,6 +8,7 @@ Run:
 
 from app.sync.bulk import synchronize
 from app.sync.job import SyncJob, SyncMode
+from app.sync.logger import LogLevel
 
 
 def main():
@@ -32,6 +33,7 @@ def main():
             "status",
         ],
         novels=[13],
+        log_level=LogLevel.DEBUG,
     )
 
     # ----------------------------------------------------------

@@ -1,6 +1,7 @@
 from .collector import SyncCollector
 from .context import SyncContext
-from .logger import SyncLogger  # type: ignore
+from .job import SyncSource
+from .logger import SyncLogger
 from .metadata import FIELDS
 from .providers import (
     LocalProvider,
@@ -77,24 +78,25 @@ class SyncEngine:
         """
         Register available metadata providers.
         """
-        ctx.logger.provider("local")
 
-        ctx.providers.register(
-            "local",
-            LocalProvider(ctx),
-        )
-        ctx.logger.provider("online")
-        ctx.providers.register(
-            "online",
-            OnlineProvider(ctx),
-        )
+        ctx.providers.register("local", LocalProvider(ctx))
+
+        ctx.providers.register("online", OnlineProvider(ctx))
 
     def _load_providers(self, ctx):
         """
-        Load metadata from all providers.
+        Load only the providers required for this job.
         """
 
-        ctx.providers.load_all()
+        match ctx.job.source:
+            case SyncSource.LOCAL:
+                ctx.providers.load("local")
+
+            case SyncSource.ONLINE:
+                ctx.providers.load("online")
+
+            case _:
+                raise ValueError(f"Unknown sync source: {ctx.job.source}")
 
     # ------------------------------------------------------------------
     # Synchronization
@@ -120,41 +122,29 @@ class SyncEngine:
             field.synchronizer(ctx, field)
 
     # ------------------------------------------------------------------
-    # Database
+    # Commit
     # ------------------------------------------------------------------
-    #    def _commit(self, ctx):
-    #        """
-    #        Persist collected updates.
-    #        """
-    #
-    #        updates = ctx.collector.as_dict()
-    #
-    #        if not updates:
-    #            ctx.result = {
-    #                "id": ctx.novel["id"],
-    #                "updated": False,
-    #                "changes": {},
-    #            }
-    #            return
-    #
-    #        self.db.update_novel(
-    #            ctx.novel["id"],
-    #            updates,
-    #        )
-    #
-    #        ctx.result = {
-    #            "id": ctx.novel["id"],
-    #            "updated": True,
-    #            "changes": updates,
-    #        }
-    #
+
     def _commit(self, ctx):
+        """
+        Commit updates to the database.
+        """
 
         updates = ctx.collector.as_dict()
 
         ctx.logger.collector(updates)
 
-        if updates:
+        if not updates:
+            ctx.logger.info("No updates to commit.")
+            return
+
+        if ctx.job.dry_run:
+            ctx.logger.info("Dry run - skipping database update")
+        else:
             self.db.update_novel(ctx.novel["id"], updates, table=ctx.job.table)
 
-        ctx.result = updates
+        ctx.result = {
+            "id": ctx.novel["id"],
+            "updated": bool(updates),
+            "changes": updates or {},
+        }

@@ -11,7 +11,7 @@ Responsibilities
 Higher-level business logic belongs elsewhere.
 """
 
-import os  # noqa: E401
+import os
 import sqlite3
 
 from app.utils.tools import find_database_file, normalize_title
@@ -179,6 +179,7 @@ def init_db():
         "UPDATE_LOCAL_ONLINE": "local",
         "EPUB_READER_FROM": "current",
         "MOON_PROGRESS_FILE": "/data/data/com.flyersoft.moonreaderp/shared_prefs/positions10.xml",
+        "CHARAC_API": "https://idruid.webnovel.com/go/api/book-role",
     }
     for key, value in default_settings.items():
         cur.execute(
@@ -370,7 +371,6 @@ def build_base_novel():
         "local_lastchaptitle": None,
         "local_lastchapfile": None,
         "characters": 0,
-        
     }
 
 

@@ -87,21 +87,22 @@ def generic_sync(ctx, field: MetadataField):
 # =============================================================================
 
 
-def sync_cover(ctx, field: MetadataField):
+def sync_cover_asset(ctx, field: MetadataField):
     """
     Synchronize cover image.
-
-    Currently behaves the same as the generic synchronizer.
-    A future version may implement online->local fallback logic.
     """
-    generic_sync(ctx, field)
+    provider = ctx.providers.get_provider(ctx.job.source)
+    cover_id = provider.fetch_cover()
+    if cover_id:
+        ctx.collector.set(field.column, cover_id)
 
 
-def sync_status(ctx, field: MetadataField):
+def sync_character_assets(ctx, field: MetadataField):
     """
-    Synchronize novel status.
+    Synchronize character assets.
     """
-    generic_sync(ctx, field)
+    provider = ctx.providers.get_provider(ctx.job.source)
+    provider.fetch_characters()
 
 
 def sync_progress(ctx, field: MetadataField):
@@ -213,9 +214,17 @@ FIELDS = {
         name="Cover",
         sources={
             "local": "cover",
+        },
+        synchronizer=generic_sync,
+    ),
+    "fetch_cover": MetadataField(
+        column="cover_path",
+        name="Fetch Cover",
+        sources={
+            "local": "cover",
             "online": "cover",
         },
-        synchronizer=sync_cover,
+        synchronizer=sync_cover_asset,
     ),
     # -----------------------------------------------------------------
     # Characters
@@ -236,6 +245,14 @@ FIELDS = {
         },
         synchronizer=generic_sync,
     ),
+    "fetch_characters": MetadataField(
+        column="characters",
+        name="Fetch Characters",
+        sources={
+            "online": "online_characters",
+        },
+        synchronizer=sync_character_assets,
+    ),
     # -----------------------------------------------------------------
     # Status
     # -----------------------------------------------------------------
@@ -245,7 +262,7 @@ FIELDS = {
         sources={
             "online": "status",
         },
-        synchronizer=sync_status,
+        synchronizer=generic_sync,
     ),
     # -----------------------------------------------------------------
     # Progress
