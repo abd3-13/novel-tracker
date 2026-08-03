@@ -15,6 +15,7 @@ This class contains no synchronization logic.
 from app.utils import db
 
 from .engine import SyncEngine
+from .events import SyncEvent
 from .logger import SyncLogger  # type: ignore
 from .selector import BulkSelector
 
@@ -43,30 +44,30 @@ class SyncRunner:
 
         total = len(novels)
 
+        self._emit(job, "job_start", total=total)
+
         results = []
 
         self._on_start(total)
 
         for current, novel in enumerate(novels, start=1):
-            self._on_progress(
-                current,
-                total,
-                novel,
+            self._on_progress(current, total, novel)
+            self._emit(
+                job, "novel_start", current=current, total=total, novel=novel["name"]
             )
 
             try:
-                result = self.engine.run(
-                    job,
-                    novel,
-                )
+                result = self.engine.run(job, novel)
 
             except Exception as e:  # noqa: BLE001
                 self.logger.error(f"{novel['name']}: {e}")
                 result = self._error_result(novel, e)
 
             results.append(result)
+            self._emit(job, "novel_finish", current=current, total=total, result=result)
 
         self._on_finish(results)
+        self._emit(job, "job_finish", results=results)
 
         return results
 
@@ -166,3 +167,13 @@ class SyncRunner:
             "title": novel["name"],
             "error": str(error),
         }
+
+    def _emit(self, job, event_type: str, **data):
+        """
+        Emit an event to the registered callback.
+        """
+
+        if job.event_handler is None:
+            return
+
+        job.event_handler(SyncEvent(type=event_type, data=data))

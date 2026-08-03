@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -52,3 +53,6 @@ class SyncJob:
 
     # Logging level
     log_level: LogLevel = LogLevel.NORMAL
+
+    # Event callbacks
+    event_handler: Callable | None = None

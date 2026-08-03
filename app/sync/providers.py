@@ -126,6 +126,7 @@ class LocalProvider(BaseProvider):
         epub_file = self.ctx.novel.get("filepath")
 
         self.ctx.logger.info("Fetching local cover...")
+        self.ctx.emit("asset", asset="cover")
 
         cover = extract_epub_cover(epub_file)
 
@@ -203,7 +204,7 @@ class OnlineProvider(BaseProvider):
         """
 
         self.ctx.logger.info("Fetching online cover...")
-
+        self.ctx.emit("asset", asset="cover")
         cover = _client.fetch_cover_image(self._book_id())
 
         if cover:
@@ -223,7 +224,7 @@ class OnlineProvider(BaseProvider):
         epub_file = self.ctx.novel.get("filepath")
 
         output_dir = Path(db.get_value("LOCAL_EPUB_DIR") or "./") / epub_file
-
+        self.ctx.emit("asset", asset="characters")
         result = WN_fetch_characters(book_id=self._book_id(), output_dir=output_dir)
 
         self.ctx.logger.info(

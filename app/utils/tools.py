@@ -3,7 +3,7 @@ import os
 import re
 import time
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 from threading import Lock
@@ -85,14 +85,13 @@ def parse_moonreader_progress(xml_path):
 
 
 def epochtohuman(epochtime):
-    #  if epochtime > 1e12:  # milliseconds
-    #    epochtime /= 1000
-    #  return datetime.utcfromtimestamp(epochtime).strftime('%Y-%m-%d %H:%M:%S')
-    return datetime.fromtimestamp(epochtime / 1000).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.fromtimestamp(epochtime / 1000, tz=timezone.utc).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
 
 
 def timenow():
-    return datetime.now().replace(microsecond=0)
+    return datetime.now(tz=timezone.utc).replace(microsecond=0)
 
 
 def determine_status(latest_chap_time):

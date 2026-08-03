@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from .events import SyncEvent
 from .job import SyncJob
 
 
@@ -34,3 +35,10 @@ class SyncContext:
 
     # Shared temporary cache
     cache: dict = field(default_factory=dict)
+
+    def emit(self, event: str, **data):
+        """
+        Emit an event for the current synchronization.
+        """
+        if self.job.event_handler:
+            self.job.event_handler(SyncEvent(type=event, data=data))

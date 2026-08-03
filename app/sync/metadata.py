@@ -46,27 +46,15 @@ def generic_sync(ctx, field: MetadataField):
     Generic synchronizer used by most metadata fields.
     """
 
-    new_value = ctx.providers.get_value(
-        ctx.job.source,
-        field,
-    )
+    new_value = ctx.providers.get_value(ctx.job.source, field)
 
-    current_value = ctx.novel.get(
-        field.column,
-    )
+    current_value = ctx.novel.get(field.column)
 
-    should_update = SyncStrategy.should_update(
-        ctx.job.mode,
-        current_value,
-        new_value,
-    )
+    should_update = SyncStrategy.should_update(ctx.job.mode, current_value, new_value)
 
-    ctx.logger.field(
-        field.column,
-        current_value,
-        new_value,
-        should_update,
-    )
+    ctx.logger.field(field.column, current_value, new_value, should_update)
+    ctx.emit("field", field=field.column)
+
     # ----------------------------
     # Sync
     # ----------------------------
@@ -74,10 +62,7 @@ def generic_sync(ctx, field: MetadataField):
     if not should_update:
         return
 
-    ctx.collector.set(
-        field.column,
-        new_value,
-    )
+    ctx.collector.set(field.column, new_value)
 
     ctx.logger.debug(f"Queued update: {field.column}")
 

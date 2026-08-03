@@ -43,11 +43,16 @@ class SyncEngine:
 
         self._register_providers(ctx)
 
+        ctx.emit("stage", stage="providers")
+
         self._load_providers(ctx)
+        ctx.emit("stage", stage="metadata")
 
         self._sync_fields(ctx)
+        ctx.emit("stage", stage="commit")
 
         self._commit(ctx)
+        ctx.emit("stage", stage="done")
 
         return ctx.result
 
