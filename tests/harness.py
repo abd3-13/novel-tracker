@@ -64,6 +64,17 @@ def run_sync_test(
     for result in results:
         print(result)
 
+    for result in results:
+        if not result.get("errors"):
+            continue
+
+        print()
+
+        print(f"Novel {result['id']}")
+
+        for error in result["errors"]:
+            print(f" • {error}")
+
     return results
 
 

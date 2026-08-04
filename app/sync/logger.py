@@ -35,6 +35,8 @@ class SyncLogger:
 
     def __init__(self, level=LogLevel.NORMAL):
         self.level = level
+        self.errors = []
+        self.warnings = []
 
     # ------------------------------------------------------------------
     # Generic logging
@@ -50,10 +52,12 @@ class SyncLogger:
 
     def warning(self, message):
         if self.level != LogLevel.SILENT:
+            self.warnings.append(message)
             print(f"[WARNING] {message}")
 
     def error(self, message):
         if self.level != LogLevel.SILENT:
+            self.errors.append(message)
             print(f"[ERROR] {message}")
 
     # ------------------------------------------------------------------
@@ -89,10 +93,11 @@ class SyncLogger:
 
         print(f"{column:25}{str(current)[:40]:40}{str(new)[:40]:40}{action}")
 
-    def summary(self, processed, updated, skipped, errors):
+    def summary(self, processed, updated, skipped, errors, warnings):
 
         self.info("\n===== Summary =====")
         self.info(f"Processed : {processed}")
         self.info(f"Updated   : {updated}")
         self.info(f"Skipped   : {skipped}")
         self.info(f"Errors    : {errors}")
+        self.info(f"Warnings  : {warnings}")

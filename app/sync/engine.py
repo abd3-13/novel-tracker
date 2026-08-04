@@ -54,7 +54,7 @@ class SyncEngine:
         self._commit(ctx)
         ctx.emit("stage", stage="done")
 
-        return ctx.result
+        return ctx.result or {"id": ctx.novel["id"], "updated": False, "changes": {}}
 
     # ------------------------------------------------------------------
     # Context
@@ -139,17 +139,19 @@ class SyncEngine:
 
         ctx.logger.collector(updates)
 
-        if not updates:
-            ctx.logger.info("No updates to commit.")
-            return
+        if updates:
+            if ctx.job.dry_run:
+                ctx.logger.info("Dry run - skipping database update")
+            else:
+                self.db.update_novel(ctx.novel["id"], updates, table=ctx.job.table)
 
-        if ctx.job.dry_run:
-            ctx.logger.info("Dry run - skipping database update")
         else:
-            self.db.update_novel(ctx.novel["id"], updates, table=ctx.job.table)
+            ctx.logger.info("No updates to commit.")
 
         ctx.result = {
             "id": ctx.novel["id"],
             "updated": bool(updates),
-            "changes": updates or {},
+            "changes": updates,
+            "errors": list(ctx.logger.errors),
+            "warnings": list(ctx.logger.warnings),
         }
