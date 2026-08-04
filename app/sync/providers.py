@@ -92,8 +92,15 @@ class LocalProvider(BaseProvider):
         # ---------------------------------------------------------
         # MoonReader progress
         # ---------------------------------------------------------
-        progress = get_moonreader_progress(epub_path)
-
+        # TODO: Make this non blocking, and add to the Synclogger error log instead of raising an exception.
+        try:
+            progress = get_moonreader_progress(epub_path)
+        except Exception as e:
+            self.ctx.logger.error(
+                f"Error fetching MoonReader progress for {novel['name']}: {e}"
+            )
+            progress = None
+            raise
         # ---------------------------------------------------------
         # Build provider data
         # ---------------------------------------------------------
@@ -109,7 +116,7 @@ class LocalProvider(BaseProvider):
             "local_lastchapfile": self.meta.last_file,
             "characters": self.meta.characters,
             "cover": self.meta.cover_id,
-            "progress": progress.chapter,
+            "progress": progress.chapter if progress is not None else None,
             "filepath": epub_path,
             "epub_exists": (
                 Path(db.get_value("LOCAL_EPUB_DIR") or "./") / epub_path
