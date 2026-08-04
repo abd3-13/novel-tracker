@@ -2,19 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from .logger import LogLevel  # type: ignore
-
-
-class SyncSource:
-    LOCAL = "local"
-    ONLINE = "online"
-
-
-class SyncMode:
-    OVERWRITE = "overwrite"
-    FILL_MISSING = "fill_missing"
-    SKIP_EXISTING = "skip_existing"
-    ONLY_CHANGED = "only_changed"
+from app.constants import LogLevel, Provider, SyncMode
 
 
 @dataclass(slots=True)
@@ -36,7 +24,7 @@ class SyncJob:
     fields: list[str] = field(default_factory=list)
 
     # Preferred metadata source
-    source: str = SyncSource.LOCAL
+    source: str = Provider.LOCAL
 
     # Update strategy
     mode: str = SyncMode.FILL_MISSING

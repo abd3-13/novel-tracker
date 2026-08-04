@@ -1,6 +1,7 @@
+from app.constants import Event, Provider, Stage
+
 from .collector import SyncCollector
 from .context import SyncContext
-from .job import SyncSource
 from .logger import SyncLogger
 from .metadata import FIELDS
 from .providers import (
@@ -43,16 +44,16 @@ class SyncEngine:
 
         self._register_providers(ctx)
 
-        ctx.emit("stage", stage="providers")
+        ctx.emit(Event.STAGE, stage=Stage.PROVIDERS)
 
         self._load_providers(ctx)
-        ctx.emit("stage", stage="metadata")
+        ctx.emit(Event.STAGE, stage=Stage.METADATA)
 
         self._sync_fields(ctx)
-        ctx.emit("stage", stage="commit")
+        ctx.emit(Event.STAGE, stage=Stage.COMMIT)
 
         self._commit(ctx)
-        ctx.emit("stage", stage="done")
+        ctx.emit(Event.STAGE, stage=Stage.DONE)
 
         return ctx.result or {"id": ctx.novel["id"], "updated": False, "changes": {}}
 
@@ -94,10 +95,10 @@ class SyncEngine:
         """
 
         match ctx.job.source:
-            case SyncSource.LOCAL:
+            case Provider.LOCAL:
                 ctx.providers.load("local")
 
-            case SyncSource.ONLINE:
+            case Provider.ONLINE:
                 ctx.providers.load("online")
 
             case _:

@@ -58,7 +58,7 @@ def commit(conn):
 # ============================================================================
 
 
-def execute(query, params=(), *, commit=False, close=False):
+def execute(query, params=(), *, commit=False, close=False, row_factory=False):
     """
     Execute a SQL statement.
 
@@ -73,7 +73,7 @@ def execute(query, params=(), *, commit=False, close=False):
     -------
     (cursor, connection)
     """
-    conn = get_conn()
+    conn = get_conn(row_factory=row_factory)
     cur = conn.cursor()
     cur.execute(query, params or ())
     if commit:
@@ -83,21 +83,21 @@ def execute(query, params=(), *, commit=False, close=False):
     return cur, conn
 
 
-def fetch_one(query, params=()):
+def fetch_one(query, params=(), row_factory=False):
     """
     Execute a query and return one row.
     """
-    cur, conn = execute(query, params)
+    cur, conn = execute(query, params, row_factory=row_factory)
     row = cur.fetchone()
     conn.close()
     return row
 
 
-def fetch_all(query, params=(), close=False):
+def fetch_all(query, params=(), close=False, row_factory=False):
     """
     Execute a query and return all rows.
     """
-    cur, conn = execute(query, params)
+    cur, conn = execute(query, params, row_factory=row_factory)
     rows = cur.fetchall()
     if close:
         conn.close()

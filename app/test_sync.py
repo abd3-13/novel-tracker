@@ -6,9 +6,9 @@ Run:
     python -m app.test_sync
 """
 
+from app.constants import LogLevel, SyncMode
 from app.sync.bulk import synchronize
-from app.sync.job import SyncJob, SyncMode
-from app.sync.logger import LogLevel
+from app.sync.job import SyncJob
 
 
 def main():

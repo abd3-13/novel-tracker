@@ -1,4 +1,4 @@
-from app.sync.job import SyncSource
+from app.constants import MetadataKey, Provider
 from tests.callbacks import print_events
 from tests.harness import run_sync_test
 
@@ -11,12 +11,8 @@ from tests.harness import run_sync_test
 
 print("\n===== Synchronization Test: Specific Fields =====")
 run_sync_test(
-    source=SyncSource.LOCAL,
+    source=Provider.LOCAL,
     ids=[13],
-    fields=[
-        "title",
-        "author",
-        "description",
-    ],
+    fields=[MetadataKey.TITLE, MetadataKey.AUTHOR, MetadataKey.DESCRIPTION],
     event_handler=print_events,
 )

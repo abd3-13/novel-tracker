@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 
+from app.constants import Asset, Event, MetadataKey
 from app.sync.services import (
     extract_epub_cover,
     get_epub_metadata,
@@ -29,9 +30,9 @@ class BaseProvider:
         self.ctx = ctx
         self.data: dict[str, Any] = {}
         self.novel = ctx.novel
-        self.filepath = self.novel.get("filepath")
-        self.url = self.novel.get("url")
-        self.source = self.novel.get("source")
+        self.filepath = self.novel.get(MetadataKey.FILEPATH)
+        self.url = self.novel.get(MetadataKey.URL)
+        self.source = self.novel.get(MetadataKey.SOURCE)
 
     def load(self) -> None:
         """
@@ -77,10 +78,14 @@ class LocalProvider(BaseProvider):
 
     def load(self) -> None:
 
-        self.ctx.logger.debug(f"Loading local metadata: {self.novel['name']}")
+        self.ctx.logger.debug(
+            f"Loading local metadata: {self.novel[MetadataKey.TITLE]}"
+        )
 
         if not self.filepath:
-            self.ctx.logger.warning(f"{self.novel['name']} has no EPUB file.")
+            self.ctx.logger.warning(
+                f"{self.novel[MetadataKey.TITLE]} has no EPUB file."
+            )
             return
 
         # ---------------------------------------------------------
@@ -97,7 +102,7 @@ class LocalProvider(BaseProvider):
             progress = get_moonreader_progress(self.filepath)
         except Exception as e:  # noqa: BLE001
             self.ctx.logger.error(
-                f"Error fetching MoonReader progress for {self.novel['name']}: {e}"
+                f"Error fetching MoonReader progress for {self.novel[MetadataKey.TITLE]}: {e}"
             )
 
         # ---------------------------------------------------------
@@ -105,19 +110,19 @@ class LocalProvider(BaseProvider):
         # ---------------------------------------------------------
 
         self.data = {
-            "title": self.meta.title,
-            "author": self.meta.author,
-            "description": self.meta.description,
-            "url": self.meta.url,
-            "source": self.meta.source,
-            "localchap": self.meta.chapters,
-            "local_lastchaptitle": self.meta.last_title,
-            "local_lastchapfile": self.meta.last_file,
-            "characters": self.meta.characters,
-            "cover": self.meta.cover_id,
-            "progress": progress.chapter if progress is not None else None,
-            "filepath": self.filepath,
-            "epub_exists": (
+            MetadataKey.TITLE: self.meta.title,
+            MetadataKey.AUTHOR: self.meta.author,
+            MetadataKey.DESCRIPTION: self.meta.description,
+            MetadataKey.URL: self.meta.url,
+            MetadataKey.SOURCE: self.meta.source,
+            MetadataKey.LOCAL_CHAPTERS: self.meta.chapters,
+            MetadataKey.LOCAL_LAST_TITLE: self.meta.last_title,
+            MetadataKey.LOCAL_LAST_FILE: self.meta.last_file,
+            MetadataKey.CHARACTERS: self.meta.characters,
+            MetadataKey.COVER: self.meta.cover_id,
+            MetadataKey.PROGRESS: progress.chapter if progress is not None else None,
+            MetadataKey.FILEPATH: self.filepath,
+            MetadataKey.EPUB_EXISTS: (
                 Path(db.get_value("LOCAL_EPUB_DIR") or "./") / self.filepath
             ).exists(),
         }
@@ -130,7 +135,7 @@ class LocalProvider(BaseProvider):
         """
 
         self.ctx.logger.info("Fetching local cover...")
-        self.ctx.emit("asset", asset="cover")
+        self.ctx.emit(Event.ASSET, asset=Asset.COVER)
 
         cover = extract_epub_cover(self.filepath)
 
@@ -158,7 +163,9 @@ class OnlineProvider(BaseProvider):
 
     def load(self) -> None:
 
-        self.ctx.logger.debug(f"Loading online metadata: {self.novel['name']}")
+        self.ctx.logger.debug(
+            f"Loading online metadata: {self.novel[MetadataKey.TITLE]}"
+        )
 
         if self.source != "webnovel":
             return
@@ -169,7 +176,9 @@ class OnlineProvider(BaseProvider):
         book_id = self.book_id
 
         if not book_id:
-            self.ctx.logger.warning(f"No WebNovel book id for '{self.novel['name']}'")
+            self.ctx.logger.warning(
+                f"No WebNovel book id for '{self.novel[MetadataKey.TITLE]}', skipping online provider."
+            )
             return
 
         info = _client.fetch_latest_chapter(book_id)
@@ -178,21 +187,17 @@ class OnlineProvider(BaseProvider):
 
         self.data = {
             # Basic
-            "title": info.title,
-            "author": info.author,
-            "description": info.description,
-            "url": self.url,
-            "source": "webnovel",
-            # Chapters
-            "onlinechap": info.chapter,
-            "latestchaptime": info.chapter_time,
-            # Characters
-            "online_characters": _client.count_online_characters(book_id),
-            # Status
-            "status": info.status,
-            # Cover
-            "cover": info.cover,
-            "filepath": self.filepath,
+            MetadataKey.TITLE: info.title,
+            MetadataKey.AUTHOR: info.author,
+            MetadataKey.DESCRIPTION: info.description,
+            MetadataKey.URL: self.url,
+            MetadataKey.SOURCE: "webnovel",
+            MetadataKey.ONLINE_CHAPTERS: info.chapter,
+            MetadataKey.LATEST_CHAPTER_TIME: info.chapter_time,
+            MetadataKey.ONLINE_CHARACTERS: _client.count_online_characters(book_id),
+            MetadataKey.STATUS: info.status,
+            MetadataKey.COVER: info.cover,
+            MetadataKey.FILEPATH: self.filepath,
         }
 
         self.ctx.logger.debug(f"Online provider loaded {len(self.data)} fields.")
@@ -203,7 +208,7 @@ class OnlineProvider(BaseProvider):
         """
 
         self.ctx.logger.info("Fetching online cover...")
-        self.ctx.emit("asset", asset="cover")
+        self.ctx.emit(Event.ASSET, asset=Asset.COVER)
         cover = _client.fetch_cover_image(self.book_id)
 
         if cover:
@@ -221,7 +226,7 @@ class OnlineProvider(BaseProvider):
         self.ctx.logger.info("Fetching characters...")
 
         output_dir = Path(db.get_value("LOCAL_EPUB_DIR") or "./") / self.filepath
-        self.ctx.emit("asset", asset="characters")
+        self.ctx.emit(Event.ASSET, asset=Asset.CHARACTERS)
         result = WN_fetch_characters(book_id=self.book_id, output_dir=output_dir)
 
         self.ctx.logger.info(

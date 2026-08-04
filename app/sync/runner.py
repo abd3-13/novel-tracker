@@ -12,6 +12,7 @@ Responsibilities
 This class contains no synchronization logic.
 """
 
+from app.constants import Event, MetadataKey
 from app.utils import db
 
 from .engine import SyncEngine
@@ -44,7 +45,7 @@ class SyncRunner:
 
         total = len(novels)
 
-        self._emit(job, "job_start", total=total)
+        self._emit(job, Event.JOB_START, total=total)
 
         results = []
 
@@ -53,7 +54,11 @@ class SyncRunner:
         for current, novel in enumerate(novels, start=1):
             self._on_progress(current, total, novel)
             self._emit(
-                job, "novel_start", current=current, total=total, novel=novel["name"]
+                job,
+                Event.NOVEL_START,
+                current=current,
+                total=total,
+                novel=novel["name"],
             )
 
             try:
@@ -64,10 +69,12 @@ class SyncRunner:
                 result = self._error_result(novel, e)
 
             results.append(result)
-            self._emit(job, "novel_finish", current=current, total=total, result=result)
+            self._emit(
+                job, Event.NOVEL_FINISH, current=current, total=total, result=result
+            )
 
         self._on_finish(results)
-        self._emit(job, "job_finish", results=results)
+        self._emit(job, Event.JOB_FINISH, results=results)
 
         return results
 
@@ -87,9 +94,7 @@ class SyncRunner:
         Select novels according to the SyncJob.
         """
 
-        selector = BulkSelector(
-            table=job.table,
-        )
+        selector = BulkSelector(table=job.table)
 
         # Explicit IDs
         if job.novels:
@@ -97,15 +102,11 @@ class SyncRunner:
 
         # Filter by source
         if "source" in job.options:
-            return selector.source(
-                job.options["source"],
-            )
+            return selector.column(MetadataKey.SOURCE, job.options["source"])
 
         # Filter by status
         if "status" in job.options:
-            return selector.status(
-                job.options["status"],
-            )
+            return selector.column(MetadataKey.STATUS, job.options["status"])
 
         # Custom WHERE clause
         if "where" in job.options:
@@ -174,8 +175,8 @@ class SyncRunner:
         """
 
         return {
-            "id": novel["id"],
-            "title": novel["name"],
+            "id": novel[MetadataKey.ID],
+            "title": novel[MetadataKey.TITLE],
             "error": str(error),
         }
 

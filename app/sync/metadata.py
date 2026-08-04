@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any, Callable  # noqa: UP035
 
+from app.constants import DatabaseColumn, Event, MetadataKey, Provider, SyncAction
+
 from .strategy import SyncStrategy
 
 # =============================================================================
@@ -53,7 +55,7 @@ def generic_sync(ctx, field: MetadataField):
     should_update = SyncStrategy.should_update(ctx.job.mode, current_value, new_value)
 
     ctx.logger.field(field.column, current_value, new_value, should_update)
-    ctx.emit("field", field=field.column)
+    ctx.emit(Event.FIELD, field=field.column)
 
     # ----------------------------
     # Sync
@@ -90,6 +92,7 @@ def sync_character_assets(ctx, field: MetadataField):
     provider.fetch_characters()
 
 
+# TODO: Implement a separate synchronizer for progress, currently using the local provider
 def sync_progress(ctx, field: MetadataField):
     """
     Synchronize MoonReader progress.
@@ -105,185 +108,177 @@ FIELDS = {
     # -----------------------------------------------------------------
     # Basic
     # -----------------------------------------------------------------
-    "title": MetadataField(
-        column="name",
+    MetadataKey.TITLE: MetadataField(
+        column=DatabaseColumn.TITLE,
         name="Title",
         sources={
-            "local": "title",
-            "online": "title",
+            Provider.LOCAL: MetadataKey.TITLE,
+            Provider.ONLINE: MetadataKey.TITLE,
         },
         synchronizer=generic_sync,
     ),
-    "url": MetadataField(
-        column="url",
+    MetadataKey.URL: MetadataField(
+        column=DatabaseColumn.URL,
         name="URL",
         sources={
-            "local": "url",
+            Provider.LOCAL: MetadataKey.URL,
         },
         synchronizer=generic_sync,
     ),
-    "author": MetadataField(
-        column="author",
+    MetadataKey.AUTHOR: MetadataField(
+        column=DatabaseColumn.AUTHOR,
         name="Author",
         sources={
-            "local": "author",
-            "online": "author",
+            Provider.LOCAL: MetadataKey.AUTHOR,
+            Provider.ONLINE: MetadataKey.AUTHOR,
         },
         synchronizer=generic_sync,
     ),
-    "description": MetadataField(
-        column="description",
+    MetadataKey.DESCRIPTION: MetadataField(
+        column=DatabaseColumn.DESCRIPTION,
         name="Description",
         sources={
-            "local": "description",
-            "online": "description",
+            Provider.LOCAL: MetadataKey.DESCRIPTION,
+            Provider.ONLINE: MetadataKey.DESCRIPTION,
         },
         synchronizer=generic_sync,
     ),
-    "source": MetadataField(
-        column="source",
+    MetadataKey.SOURCE: MetadataField(
+        column=DatabaseColumn.SOURCE,
         name="Source",
         sources={
-            "local": "source",
+            Provider.LOCAL: MetadataKey.SOURCE,
         },
         synchronizer=generic_sync,
     ),
     # -----------------------------------------------------------------
     # Chapters
     # -----------------------------------------------------------------
-    "localchap": MetadataField(
-        column="localchap",
+    MetadataKey.LOCAL_CHAPTERS: MetadataField(
+        column=DatabaseColumn.LOCAL_CHAPTERS,
         name="Local Chapters",
         sources={
-            "local": "localchap",
+            Provider.LOCAL: MetadataKey.LOCAL_CHAPTERS,
         },
         synchronizer=generic_sync,
     ),
-    "onlinechap": MetadataField(
-        column="onlinechap",
+    MetadataKey.ONLINE_CHAPTERS: MetadataField(
+        column=DatabaseColumn.ONLINE_CHAPTERS,
         name="Online Chapters",
         sources={
-            "online": "onlinechap",
+            Provider.ONLINE: MetadataKey.ONLINE_CHAPTERS,
         },
         synchronizer=generic_sync,
     ),
-    "latestchaptime": MetadataField(
-        column="latestchaptime",
+    MetadataKey.LATEST_CHAPTER_TIME: MetadataField(
+        column=DatabaseColumn.LATEST_CHAPTER_TIME,
         name="Latest Chapter Time",
         sources={
-            "online": "latestchaptime",
+            Provider.ONLINE: MetadataKey.LATEST_CHAPTER_TIME,
         },
         synchronizer=generic_sync,
     ),
-    "local_lastchaptitle": MetadataField(
-        column="local_lastchaptitle",
+    MetadataKey.LOCAL_LAST_TITLE: MetadataField(
+        column=DatabaseColumn.LOCAL_LAST_TITLE,
         name="Last Chapter Title",
         sources={
-            "local": "local_lastchaptitle",
+            Provider.LOCAL: MetadataKey.LOCAL_LAST_TITLE,
         },
         synchronizer=generic_sync,
     ),
-    "local_lastchapfile": MetadataField(
-        column="local_lastchapfile",
+    MetadataKey.LOCAL_LAST_FILE: MetadataField(
+        column=DatabaseColumn.LOCAL_LAST_FILE,
         name="Last Chapter File",
         sources={
-            "local": "local_lastchapfile",
+            Provider.LOCAL: MetadataKey.LOCAL_LAST_FILE,
         },
         synchronizer=generic_sync,
     ),
     # -----------------------------------------------------------------
     # Cover
     # -----------------------------------------------------------------
-    "cover": MetadataField(
-        column="cover_path",
+    MetadataKey.COVER: MetadataField(
+        column=DatabaseColumn.COVER,
         name="Cover",
         sources={
-            "local": "cover",
+            Provider.LOCAL: MetadataKey.COVER,
         },
         synchronizer=generic_sync,
     ),
-    "fetch_cover": MetadataField(
-        column="cover_path",
+    SyncAction.FETCH_COVER: MetadataField(
+        column=DatabaseColumn.COVER,
         name="Fetch Cover",
         sources={
-            "local": "cover",
-            "online": "cover",
+            Provider.LOCAL: MetadataKey.COVER,
+            Provider.ONLINE: MetadataKey.COVER,
         },
         synchronizer=sync_cover_asset,
     ),
     # -----------------------------------------------------------------
     # Characters
     # -----------------------------------------------------------------
-    "characters": MetadataField(
-        column="characters",
+    MetadataKey.CHARACTERS: MetadataField(
+        column=DatabaseColumn.CHARACTERS,
         name="Characters",
         sources={
-            "local": "characters",
+            Provider.LOCAL: MetadataKey.CHARACTERS,
         },
         synchronizer=generic_sync,
     ),
-    "online_characters": MetadataField(
-        column="online_characters",
+    MetadataKey.ONLINE_CHARACTERS: MetadataField(
+        column=DatabaseColumn.ONLINE_CHARACTERS,
         name="Online Characters",
         sources={
-            "online": "online_characters",
+            Provider.ONLINE: MetadataKey.ONLINE_CHARACTERS,
         },
         synchronizer=generic_sync,
     ),
-    "fetch_characters": MetadataField(
-        column="characters",
+    SyncAction.FETCH_CHARACTERS: MetadataField(
+        column=DatabaseColumn.CHARACTERS,
         name="Fetch Characters",
         sources={
-            "online": "online_characters",
+            Provider.ONLINE: MetadataKey.ONLINE_CHARACTERS,
         },
         synchronizer=sync_character_assets,
     ),
     # -----------------------------------------------------------------
     # Status
     # -----------------------------------------------------------------
-    "status": MetadataField(
-        column="status",
+    MetadataKey.STATUS: MetadataField(
+        column=DatabaseColumn.STATUS,
         name="Status",
         sources={
-            "online": "status",
+            Provider.ONLINE: MetadataKey.STATUS,
         },
         synchronizer=generic_sync,
     ),
     # -----------------------------------------------------------------
     # Progress
     # -----------------------------------------------------------------
-    "progress": MetadataField(
-        column="progress",
+    MetadataKey.PROGRESS: MetadataField(
+        column=DatabaseColumn.PROGRESS,
         name="Reading Progress",
         sources={
-            "local": "progress",
+            Provider.LOCAL: MetadataKey.PROGRESS,
         },
         synchronizer=sync_progress,
-    ),
-    "progress_updated": MetadataField(
-        column="progress_updated",
-        name="Progress Updated",
-        sources={
-            "local": "progress_updated",
-        },
-        synchronizer=generic_sync,
     ),
     # -----------------------------------------------------------------
     # File
     # -----------------------------------------------------------------
-    "filepath": MetadataField(
-        column="filepath",
+    MetadataKey.FILEPATH: MetadataField(
+        column=DatabaseColumn.FILEPATH,
         name="EPUB File",
         sources={
-            "local": "filepath",
+            Provider.LOCAL: MetadataKey.FILEPATH,
         },
         synchronizer=generic_sync,
     ),
-    "epub_exists": MetadataField(
-        column="epub_exists",
+    MetadataKey.EPUB_EXISTS: MetadataField(
+        column=DatabaseColumn.EPUB_EXISTS,
         name="EPUB Exists",
         sources={
-            "local": "epub_exists",
+            Provider.LOCAL: MetadataKey.EPUB_EXISTS,
         },
         synchronizer=generic_sync,
     ),

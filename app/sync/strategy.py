@@ -1,6 +1,6 @@
 from typing import Any
 
-from .job import SyncMode
+from app.constants import SyncMode
 
 
 class SyncStrategy:

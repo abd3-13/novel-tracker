@@ -1,9 +1,5 @@
-from app.sync.job import (
-    SyncJob,
-    SyncMode,
-    SyncSource,
-)
-from app.sync.logger import LogLevel
+from app.constants import Default, LogLevel, Provider, SyncMode
+from app.sync.job import SyncJob
 from app.sync.runner import SyncRunner
 
 from .callbacks import quiet
@@ -12,10 +8,10 @@ from .report import TestReport
 
 def run_sync_test(
     *,
-    source=SyncSource.LOCAL,
+    source=Provider.LOCAL,
     fields=None,
     ids=None,
-    table="demo_novels",
+    table=Default.DEMO_NOVEL_TABLE,
     mode=SyncMode.FILL_MISSING,
     dry_run=True,
     force=False,
@@ -60,9 +56,6 @@ def run_sync_test(
     report.finish(results)
 
     print("\n===== Results =====")
-
-    for result in results:
-        print(result)
 
     for result in results:
         if not result.get("errors"):

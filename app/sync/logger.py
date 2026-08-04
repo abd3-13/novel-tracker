@@ -1,19 +1,4 @@
-from enum import StrEnum
-
-# =============================================================================
-# Log Levels
-# =============================================================================
-
-
-class LogLevel(StrEnum):
-    """
-    Synchronization logging levels.
-    """
-
-    SILENT = "silent"
-    NORMAL = "normal"
-    DEBUG = "debug"
-
+from app.constants import LogLevel, SyncAction
 
 # =============================================================================
 # Logger
@@ -89,7 +74,7 @@ class SyncLogger:
         if self.level != LogLevel.DEBUG:
             return
 
-        action = "UPDATE" if update else "SKIP"
+        action = SyncAction.UPDATE if update else SyncAction.SKIP
 
         print(f"{column:25}{str(current)[:40]:40}{str(new)[:40]:40}{action}")
 
