@@ -30,8 +30,10 @@
       </div>
     </div>
   </div>
-  <div id="library-overlays"> </div>
-  <div id="libsync">{% include "sync.html" %}</div>
+  <div id="library-overlays">
+     {% include "overlays/sync.html" %}
+     {% include "overlays/filter.html" %}
+  </div>
   <script src="{{ url_for('static', filename='vendor/tabler/tabler.min.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='js/library/app.js') }}"></script>
 </body>

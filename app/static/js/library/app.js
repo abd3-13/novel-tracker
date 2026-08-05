@@ -3,80 +3,89 @@ import { library } from "./state.js";
 import { applySearch } from "./utils.js";
 import { renderGrid } from "./views/grid.js";
 import { renderHeader } from "./components/header.js";
-import { applyFilters, renderFilterPanel, bindFilterPanel, updateFilterPanel } from "./components/filters.js";
-import { renderToolbar, bindToolbar, updateSortButton } from "./components/toolbar.js";
+import {
+  applyFilters,
+  initFilterPanel,
+  bindFilterPanel,
+  updateFilterPanel,
+} from "./components/filters.js";
+import {
+  renderToolbar,
+  bindToolbar,
+  updateSortButton,
+} from "./components/toolbar.js";
 import { applySort } from "./components/sort.js";
 import { renderNovelCard } from "./components/novel-card.js";
-import { initSync } from "./components/sync.js"
+import { initSyncPanel } from "./components/sync.js";
 
 async function init() {
   library.novels = await fetchNovels();
 
-  renderLibrary();      // Build the UI once
+  renderLibrary(); // Build the UI once
 
   //updateLibrary();      // Populate the grid
 }
 
 function calculateStats() {
-
   library.stats.total = library.novels.length;
 
-  library.stats.updates = library.novels.filter(n => n.chapters.diff > 0).length;
+  library.stats.updates = library.novels.filter(
+    (n) => n.chapters.diff > 0,
+  ).length;
 
-  library.stats.unread = library.novels.filter(n => n.reading.unread > 0).length;
+  library.stats.unread = library.novels.filter(
+    (n) => n.reading.unread > 0,
+  ).length;
 
-  library.stats.missingEpub = library.novels.filter(n => !n.epub.exists).length;
+  library.stats.missingEpub = library.novels.filter(
+    (n) => !n.epub.exists,
+  ).length;
 }
 
 export function renderLibrary() {
+  renderHeader(library);
 
-    renderHeader(library);
+  renderToolbar(library);
 
-    renderToolbar(library);
+  initFilterPanel(library);
 
-    document.getElementById("library-overlays").innerHTML = renderFilterPanel(library);
+  initSyncPanel();
 
-    initSync();
+  bindToolbar(
+    (search) => {
+      library.search = search;
+      updateLibrary();
+    },
 
-    bindToolbar(
+    (option) => {
+      if (library.sort.field === option.field) {
+        option.direction = option.direction === "asc" ? "desc" : "asc";
+      }
 
-        search => { library.search = search; updateLibrary(); },
+      library.sort = structuredClone(option);
+      updateSortButton(library.sort);
+      updateLibrary();
+    },
+  );
 
-        option => {
-            if (library.sort.field === option.field) {
-                option.direction = option.direction === "asc" ? "desc" : "asc";
-            }
-
-            library.sort = structuredClone(option);
-            updateSortButton(library.sort);
-            updateLibrary();
-        }
-    );
-
-    bindFilterPanel(library);
-    updateLibrary();
-
+  //bindFilterPanel(library);
+  updateLibrary();
 }
-
 
 export function updateLibrary() {
+  library.visible = [...library.novels];
 
-    library.visible = [...library.novels];
+  applySearch(library);
 
-    applySearch(library);
+  applySort(library);
 
-    applySort(library);
+  applyFilters(library);
 
-    applyFilters(library);
+  calculateStats();
 
-    calculateStats();
+  renderHeader(library);
 
-    renderHeader(library);
-
-    renderGrid(document.getElementById("library-content"), library.visible);
-
-
+  renderGrid(document.getElementById("library-content"), library.visible);
 }
-
 
 init();
