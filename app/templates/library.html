@@ -23,15 +23,16 @@
         <!-- Toolbar -->
         <div id="library-toolbar" class="mb-4"></div><!-- Active Filters -->
         <div id="library-filters" class="mb-3"></div><!-- Main Content -->
-        
+
         <div id="library-content">
           <!-- Grid Renderer inserts here -->
         </div>
       </div>
     </div>
   </div>
-  <div id="library-overlays"></div>
-  <script src="{{ url_for('static', filename='vendor/tabler/tabler.min.js') }}"></script> 
+  <div id="library-overlays"> </div>
+  <div id="libsync">{% include "sync.html" %}</div>
+  <script src="{{ url_for('static', filename='vendor/tabler/tabler.min.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='js/library/app.js') }}"></script>
 </body>
 </html>

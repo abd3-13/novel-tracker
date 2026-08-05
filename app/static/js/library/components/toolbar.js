@@ -7,7 +7,7 @@ function renderSortMenu(sort) {
             <a href="#" class="dropdown-item library-sort-item ${item.field === sort.field ? "active" : ""}" data-field="${item.field}">
               <i class="ti ti-${item.icon} me-2"></i>${item.label}${item.field === sort.field ? `<span class="float-end sort-check"> <i class="ti ti-check"></i> </span>` : ""}
             </a>
-            
+
         `).join("")}
     `).join('<div class="dropdown-divider"></div>');
 }
@@ -16,7 +16,7 @@ export function updateSortButton(sort) {
     const arrow = sort.direction === "asc" ? "ti-sort-ascending" : "ti-sort-descending";
     const button = document.getElementById("library-sort-button");
     button.innerHTML = `<i class="ti ti-${sort.icon} me-1"></i>Sort : ${sort.label} <i class="ti ${arrow} ms-1"></i>`;
-    
+
     // Remove previous active item
     document.querySelectorAll(".library-sort-item").forEach(item => {
         item.classList.remove("active");
@@ -67,7 +67,7 @@ export function renderToolbar(library) {
           <div class="dropdown-menu" id="sort-dropdown-menu">${renderSortMenu(library.sort)}</div>
         </div>
         <div class="col-auto"><button class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#library-filter-panel"><i class="ti ti-filter me-1"></i>Filter</button></div>
-        <div class="col-auto"><button class="btn btn-outline-secondary">Bulk</button></div>
+        <div class="col-auto"><button class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#sync-offcanvas"><i class="ti ti-refresh me-1"></i>Synchronize</button></div>
       </div>
     `;
 }

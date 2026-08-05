@@ -7,6 +7,7 @@ import { applyFilters, renderFilterPanel, bindFilterPanel, updateFilterPanel } f
 import { renderToolbar, bindToolbar, updateSortButton } from "./components/toolbar.js";
 import { applySort } from "./components/sort.js";
 import { renderNovelCard } from "./components/novel-card.js";
+import { initSync } from "./components/sync.js"
 
 async function init() {
   library.novels = await fetchNovels();
@@ -21,7 +22,7 @@ function calculateStats() {
   library.stats.total = library.novels.length;
 
   library.stats.updates = library.novels.filter(n => n.chapters.diff > 0).length;
-    
+
   library.stats.unread = library.novels.filter(n => n.reading.unread > 0).length;
 
   library.stats.missingEpub = library.novels.filter(n => !n.epub.exists).length;
@@ -34,6 +35,8 @@ export function renderLibrary() {
     renderToolbar(library);
 
     document.getElementById("library-overlays").innerHTML = renderFilterPanel(library);
+
+    initSync();
 
     bindToolbar(
 
@@ -71,7 +74,7 @@ export function updateLibrary() {
     renderHeader(library);
 
     renderGrid(document.getElementById("library-content"), library.visible);
-    
+
 
 }
 
