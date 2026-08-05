@@ -149,6 +149,43 @@ class SyncAction(StrEnum):
     FETCH_CHARACTERS = "fetch_characters"
 
 
+SYNC_METADATA = {
+    "title": {
+        "label": "Title",
+        "group": "General",
+        "provider": [Provider.LOCAL, Provider.ONLINE],
+        "keys": [MetadataKey.TITLE],
+        "default": True,
+    },
+    "author": {
+        "label": "Author",
+        "group": "General",
+        "provider": [Provider.LOCAL, Provider.ONLINE],
+        "keys": [MetadataKey.AUTHOR],
+        "default": True,
+    },
+    "cover": {
+        "label": "Cover",
+        "group": "Assets",
+        "provider": [Provider.ONLINE],
+        "asset": Asset.COVER,
+        "default": True,
+    },
+    "chapters": {
+        "label": "Chapters",
+        "group": "Content",
+        "provider": [Provider.LOCAL, Provider.ONLINE],
+        "keys": [
+            MetadataKey.LOCAL_CHAPTERS,
+            MetadataKey.ONLINE_CHAPTERS,
+            MetadataKey.LOCAL_LAST_TITLE,
+            MetadataKey.LOCAL_LAST_FILE,
+            MetadataKey.LATEST_CHAPTER_TIME,
+        ],
+        "default": True,
+    },
+}
+
 # =============================================================================
 # Log Levels
 # =============================================================================

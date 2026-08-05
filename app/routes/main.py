@@ -3,7 +3,8 @@ import logging
 from flask import Blueprint, jsonify, render_template
 from flask_login import current_user, login_required  # type: ignore
 
-import app.utils.db as db
+from app.sync.metadata import FIELDS
+from app.utils import db
 from app.utils.filters import log_SpamFilter
 
 main_bp = Blueprint("main", __name__)
@@ -92,3 +93,15 @@ def api_library():
     library = [build_library_novel(row) for row in rows]
 
     return jsonify({"data": library})
+
+
+@main_bp.route("/api/sync/registry")
+@login_required
+def api_sync_registry():
+    return jsonify(
+        [
+            field.to_ui()
+            for field in sorted(FIELDS.values(), key=lambda f: f.order)
+            if field.visible and field.enabled
+        ]
+    )

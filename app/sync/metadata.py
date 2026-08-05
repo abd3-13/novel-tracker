@@ -18,9 +18,11 @@ class MetadataField:
 
     # Database column
     column: str
+    group: str
 
-    # Display name
     name: str
+    description: str = ""
+    icon: str = "database"
 
     # Provider key mapping
     #
@@ -34,8 +36,23 @@ class MetadataField:
     # Synchronization function
     synchronizer: Callable[..., Any] | None = None
 
+    visible: bool = True
+    default: bool = True
+
+    order: int = 0
+
     # Allow disabling fields without removing them
     enabled: bool = True
+
+    def to_ui(self):
+        return {
+            "id": self.column,
+            "name": self.name,
+            "description": self.description,
+            "icon": self.icon,
+            "default": self.default,
+            "providers": [p for p in self.sources],
+        }
 
 
 # =============================================================================
@@ -110,7 +127,11 @@ FIELDS = {
     # -----------------------------------------------------------------
     MetadataKey.TITLE: MetadataField(
         column=DatabaseColumn.TITLE,
+        group="Basic",
         name="Title",
+        description="Novel title.",
+        icon="book",
+        order=10,
         sources={
             Provider.LOCAL: MetadataKey.TITLE,
             Provider.ONLINE: MetadataKey.TITLE,
@@ -119,7 +140,11 @@ FIELDS = {
     ),
     MetadataKey.URL: MetadataField(
         column=DatabaseColumn.URL,
+        group="Basic",
         name="URL",
+        description="Original novel website address.",
+        icon="link",
+        order=20,
         sources={
             Provider.LOCAL: MetadataKey.URL,
         },
@@ -127,7 +152,11 @@ FIELDS = {
     ),
     MetadataKey.AUTHOR: MetadataField(
         column=DatabaseColumn.AUTHOR,
+        group="Basic",
         name="Author",
+        description="Novel author.",
+        icon="user",
+        order=30,
         sources={
             Provider.LOCAL: MetadataKey.AUTHOR,
             Provider.ONLINE: MetadataKey.AUTHOR,
@@ -136,7 +165,11 @@ FIELDS = {
     ),
     MetadataKey.DESCRIPTION: MetadataField(
         column=DatabaseColumn.DESCRIPTION,
+        group="Basic",
         name="Description",
+        description="Synopsis or summary.",
+        icon="align-left",
+        order=40,
         sources={
             Provider.LOCAL: MetadataKey.DESCRIPTION,
             Provider.ONLINE: MetadataKey.DESCRIPTION,
@@ -145,7 +178,11 @@ FIELDS = {
     ),
     MetadataKey.SOURCE: MetadataField(
         column=DatabaseColumn.SOURCE,
+        group="Basic",
         name="Source",
+        description="Metadata provider or website.",
+        icon="world",
+        order=50,
         sources={
             Provider.LOCAL: MetadataKey.SOURCE,
         },
@@ -156,7 +193,11 @@ FIELDS = {
     # -----------------------------------------------------------------
     MetadataKey.LOCAL_CHAPTERS: MetadataField(
         column=DatabaseColumn.LOCAL_CHAPTERS,
+        group="Chapters",
         name="Local Chapters",
+        description="Number of chapters stored in the EPUB.",
+        icon="books",
+        order=100,
         sources={
             Provider.LOCAL: MetadataKey.LOCAL_CHAPTERS,
         },
@@ -164,7 +205,11 @@ FIELDS = {
     ),
     MetadataKey.ONLINE_CHAPTERS: MetadataField(
         column=DatabaseColumn.ONLINE_CHAPTERS,
+        group="Chapters",
         name="Online Chapters",
+        description="Latest chapter count available online.",
+        icon="cloud",
+        order=110,
         sources={
             Provider.ONLINE: MetadataKey.ONLINE_CHAPTERS,
         },
@@ -172,7 +217,11 @@ FIELDS = {
     ),
     MetadataKey.LATEST_CHAPTER_TIME: MetadataField(
         column=DatabaseColumn.LATEST_CHAPTER_TIME,
+        group="Chapters",
         name="Latest Chapter Time",
+        description="Publication time of the latest online chapter.",
+        icon="clock",
+        order=120,
         sources={
             Provider.ONLINE: MetadataKey.LATEST_CHAPTER_TIME,
         },
@@ -180,7 +229,11 @@ FIELDS = {
     ),
     MetadataKey.LOCAL_LAST_TITLE: MetadataField(
         column=DatabaseColumn.LOCAL_LAST_TITLE,
+        group="Chapters",
         name="Last Chapter Title",
+        description="Title of the last chapter in the EPUB.",
+        icon="book-2",
+        order=130,
         sources={
             Provider.LOCAL: MetadataKey.LOCAL_LAST_TITLE,
         },
@@ -188,7 +241,11 @@ FIELDS = {
     ),
     MetadataKey.LOCAL_LAST_FILE: MetadataField(
         column=DatabaseColumn.LOCAL_LAST_FILE,
+        group="Chapters",
         name="Last Chapter File",
+        description="Internal EPUB file for the last chapter.",
+        icon="file-text",
+        order=140,
         sources={
             Provider.LOCAL: MetadataKey.LOCAL_LAST_FILE,
         },
@@ -199,7 +256,11 @@ FIELDS = {
     # -----------------------------------------------------------------
     MetadataKey.COVER: MetadataField(
         column=DatabaseColumn.COVER,
+        group="Cover",
         name="Cover",
+        description="Stored cover image.",
+        icon="photo",
+        order=200,
         sources={
             Provider.LOCAL: MetadataKey.COVER,
         },
@@ -207,7 +268,11 @@ FIELDS = {
     ),
     SyncAction.FETCH_COVER: MetadataField(
         column=DatabaseColumn.COVER,
+        group="Cover",
         name="Fetch Cover",
+        description="Download a fresh cover image.",
+        icon="download",
+        order=210,
         sources={
             Provider.LOCAL: MetadataKey.COVER,
             Provider.ONLINE: MetadataKey.COVER,
@@ -219,7 +284,11 @@ FIELDS = {
     # -----------------------------------------------------------------
     MetadataKey.CHARACTERS: MetadataField(
         column=DatabaseColumn.CHARACTERS,
+        group="Characters",
         name="Characters",
+        description="Stored character list.",
+        icon="users",
+        order=300,
         sources={
             Provider.LOCAL: MetadataKey.CHARACTERS,
         },
@@ -227,7 +296,11 @@ FIELDS = {
     ),
     MetadataKey.ONLINE_CHARACTERS: MetadataField(
         column=DatabaseColumn.ONLINE_CHARACTERS,
+        group="Characters",
         name="Online Characters",
+        description="Characters available from the online provider.",
+        icon="users-group",
+        order=310,
         sources={
             Provider.ONLINE: MetadataKey.ONLINE_CHARACTERS,
         },
@@ -235,7 +308,11 @@ FIELDS = {
     ),
     SyncAction.FETCH_CHARACTERS: MetadataField(
         column=DatabaseColumn.CHARACTERS,
+        group="Characters",
         name="Fetch Characters",
+        description="Download character images and metadata.",
+        icon="user-down",
+        order=320,
         sources={
             Provider.ONLINE: MetadataKey.ONLINE_CHARACTERS,
         },
@@ -246,7 +323,11 @@ FIELDS = {
     # -----------------------------------------------------------------
     MetadataKey.STATUS: MetadataField(
         column=DatabaseColumn.STATUS,
+        group="Status",
         name="Status",
+        description="Publication status of the novel.",
+        icon="circle-check",
+        order=400,
         sources={
             Provider.ONLINE: MetadataKey.STATUS,
         },
@@ -257,7 +338,11 @@ FIELDS = {
     # -----------------------------------------------------------------
     MetadataKey.PROGRESS: MetadataField(
         column=DatabaseColumn.PROGRESS,
+        group="Status",
         name="Reading Progress",
+        description="Reading progress imported from Moon+ Reader.",
+        icon="progress",
+        order=500,
         sources={
             Provider.LOCAL: MetadataKey.PROGRESS,
         },
@@ -268,7 +353,11 @@ FIELDS = {
     # -----------------------------------------------------------------
     MetadataKey.FILEPATH: MetadataField(
         column=DatabaseColumn.FILEPATH,
+        group="File",
         name="EPUB File",
+        description="Path to the EPUB file.",
+        icon="file",
+        order=600,
         sources={
             Provider.LOCAL: MetadataKey.FILEPATH,
         },
@@ -276,7 +365,11 @@ FIELDS = {
     ),
     MetadataKey.EPUB_EXISTS: MetadataField(
         column=DatabaseColumn.EPUB_EXISTS,
+        group="File",
         name="EPUB Exists",
+        description="Whether the EPUB file exists on disk.",
+        icon="file-check",
+        order=610,
         sources={
             Provider.LOCAL: MetadataKey.EPUB_EXISTS,
         },

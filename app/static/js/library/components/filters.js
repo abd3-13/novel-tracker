@@ -40,8 +40,6 @@ function matchesFilter(novel, filter) {
 }
 
 export function initFilterPanel(library) {
-  console.count("initFilterPanel");
-
   updateFilterPanel(library);
 
   document.getElementById("filter-reset").onclick = () => {
@@ -59,8 +57,6 @@ export function initFilterPanel(library) {
 }
 
 export function updateFilterPanel(library) {
-  console.count("updateFilterPanel");
-
   const html = renderFilterContent(library);
 
   const content = document.getElementById("library-filter-content");
@@ -139,8 +135,6 @@ function renderEmptyState() {
 }
 
 export function bindFilterPanel(library) {
-  console.count("bindFilterPanel");
-
   // Expand / Collapse
   document.querySelectorAll(".library-filter-header").forEach((header) => {
     header.onclick = () => {
