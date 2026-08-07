@@ -34,6 +34,17 @@
   white-space: nowrap;
 }
 
+.novel-card {
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.novel-card.selected {
+  border-color: var(--tblr-primary) !important;
+  box-shadow: 0 0 0 4px rgba(var(--tblr-primary-rgb), 0.75) !important;
+  border-radius: 0% !important;
+}
+
 /* ==========================================================
    Filter Panel
    ========================================================== */
