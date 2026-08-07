@@ -3,7 +3,9 @@ import logging
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user, login_required
 
+from app.sync.job import SyncJob
 from app.sync.metadata import FIELDS
+from app.sync.runner import SyncRunner
 from app.utils import db
 from app.utils.filters import log_SpamFilter
 
@@ -88,7 +90,7 @@ def library():
 @login_required
 def api_library():
 
-    rows = db.get_table("demo_novels", current_user.role)
+    rows = db.get_table(current_user)
 
     library = [build_library_novel(row) for row in rows]
 
@@ -110,11 +112,24 @@ def api_sync_registry():
 @main_bp.route("/api/v1/sync", methods=["POST"])
 @login_required
 def api_sync():
-    job = request.get_json(silent=True)
+    try:
+        data = request.get_json(silent=True)
+        if data is None:
+            raise ValueError("Invalid or missing JSON payload")
+        data["table"] = db.get_user_table(current_user)
+        job = SyncJob.from_dict(data)
+        runner = SyncRunner()
+        results = runner.run(job)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as e:  # noqa: BLE001
+        print(f"Synchronization failed, {e}")
+        return jsonify({"error": "Synchronization failed"}), 500
 
-    if not job:
-        return jsonify({"error": "invalid or missing JSON body"}), 400
+    print(f"received sync job: {job}")
 
-    print(f"recive sync api: ${job}")
-
-    return jsonify("")
+    return jsonify(
+        {
+            "results": results,
+        }
+    )

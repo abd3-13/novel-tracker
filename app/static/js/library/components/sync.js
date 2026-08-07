@@ -1,3 +1,5 @@
+import { getSyncRegistry, runSync } from './../api.js';
+
 // Global state
 const syncConfig = {
   source: 'local',
@@ -7,7 +9,6 @@ const syncConfig = {
 };
 
 function updateSyncConfig() {
-  console.count('updateSyncConfig triggerd');
   syncConfig.source = document.querySelector('input[name="sync-source"]:checked').value;
 
   syncConfig.mode = document.getElementById('sync-mode').value;
@@ -17,8 +18,6 @@ function updateSyncConfig() {
 }
 
 export function initSyncPanel() {
-  console.count('Sync initialized');
-
   renderMetadata();
 
   updateSyncConfig();
@@ -53,12 +52,7 @@ async function renderMetadata() {
   container.innerHTML = `<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-muted"></div></div>`;
 
   try {
-    // TODO: move the api block to api.js
-    const response = await fetch('/api/v1/sync/registry');
-
-    if (!response.ok) throw new Error('Failed to load metadata registry.');
-
-    syncFields = await response.json();
+    syncFields = await getSyncRegistry();
     const source = syncConfig.source;
 
     container.innerHTML = `
@@ -130,6 +124,8 @@ function collectJob() {
     dry_run: syncConfig.dryRun,
 
     force: syncConfig.force,
+    // TODO: add ui selection mode so novels can be id of the selected librray
+    novels: [13],
 
     fields: Array.from(document.querySelectorAll('.sync-field:checked')).map(cb => cb.value)
   };
@@ -139,17 +135,7 @@ async function startSync() {
   const job = collectJob();
 
   try {
-    const response = await fetch('/api/v1/sync', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(job)
-    });
-
-    if (!response.ok) throw new Error(await response.text());
-
-    const result = await response.json();
+    const result = await runSync(job);
 
     console.log(result);
   } catch (err) {

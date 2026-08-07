@@ -14,6 +14,7 @@ Higher-level business logic belongs elsewhere.
 import os
 import sqlite3
 
+from app.constants import Default
 from app.utils.tools import find_database_file, normalize_title
 
 # ============================================================================
@@ -275,20 +276,19 @@ def save_setting(key, value):
 # ============================================================================
 
 
-def get_table(table=DEFAULT_TABLE, role="user"):
+def get_table(user):
     """
-    Return all novels from a table.
+    Return all novels from a table. based on user and role
     Parameters
     ----------
-    table : Table name.
-    role : Determines filtering.
+    current_user: flask current user object
     """
-    if role == "admin":
-        query = f"SELECT * FROM {table}"
-    elif role == "demo":
-        query = "SELECT * FROM demo_novels"
-    else:
+    table = get_user_table(user)
+    role = user.role
+    query = f"SELECT * FROM {table}"
+    if role != "admin":
         query = f"SELECT * FROM {table} WHERE tags NOT LIKE '%nsfw%'"
+
     return fetch_all(query, close=True)
 
 
@@ -435,6 +435,13 @@ def find_dup_title_db(input_title, table=DEFAULT_TABLE):
         if normalize_title(title) == normalized:
             return {"id": novel_id, "name": title}
     return None
+
+
+def get_user_table(user):
+    if user.username == "demo":
+        return Default.DEMO_NOVEL_TABLE
+
+    return Default.NOVEL_TABLE
 
 
 # ============================================================================
