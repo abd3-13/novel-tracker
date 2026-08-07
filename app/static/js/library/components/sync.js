@@ -42,8 +42,22 @@ function renderPills() {
 
     if (disabled) cb.checked = false;
   });
-
+  reorderPills();
   updateMetadataToggle();
+}
+
+function reorderPills() {
+  const group = document.querySelector('#sync-metadata .form-selectgroup');
+
+  const enabled = [];
+  const disabled = [];
+
+  for (const item of group.children) {
+    const cb = item.querySelector('.sync-field');
+    (cb.disabled ? disabled : enabled).push(item);
+  }
+
+  [...enabled, ...disabled].forEach(item => group.appendChild(item));
 }
 
 async function renderMetadata() {
@@ -70,6 +84,7 @@ async function renderMetadata() {
           .join('')}
       </div>
     `;
+    reorderPills();
   } catch (err) {
     console.error(err);
     container.innerHTML = `<div class="alert alert-danger mb-0"><i class="ti ti-alert-circle me-2"></i>Failed to load synchronization metadata.</div>`;
