@@ -1,40 +1,38 @@
-<!DOCTYPE html>
+<!doctype html>
 <html class="dark" data-bs-theme="dark">
-<head>
-  <title>Novel Tracker</title>
-  <meta name="viewport" content="width=device-width">
-  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/tabler/tabler.min.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/tabler/tabler-icons.min.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/library/ui.css') }}">
-</head>
-<body>
-  <div class="page-wrapper">
-    <!-- Page Header -->
-    <div class="page-header d-print-none">
-      <div class="container-xl">
-
-        <div id="library-header"></div>
-
+  <head>
+    <title>Novel Tracker</title>
+    <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/tabler/tabler.min.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/tabler/tabler-icons.min.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/library/ui.css') }}" />
+  </head>
+  <body>
+    <div class="page-wrapper">
+      <!-- Page Header -->
+      <div class="page-header d-print-none library-header-sticky mt-0">
+        <div class="container-xl">
+          <div id="library-header" class="mb-4"></div>
+          <div id="library-toolbar" class="mb-4"></div>
+        </div>
       </div>
-    </div>
-    <!-- Page Body -->
-    <div class="page-body">
-      <div class="container-md">
-        <!-- Toolbar -->
-        <div id="library-toolbar" class="mb-4"></div><!-- Active Filters -->
-        <div id="library-filters" class="mb-3"></div><!-- Main Content -->
+      <!-- Page Body -->
+      <div class="page-body">
+        <div class="container-md">
+          <!-- Toolbar -->
 
-        <div id="library-content">
-          <!-- Grid Renderer inserts here -->
+          <!-- Active Filters -->
+          <div id="library-filters" class="mb-3"></div>
+          <!-- Main Content -->
+
+          <div id="library-content">
+            <!-- Grid Renderer inserts here -->
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  <div id="library-overlays">
-     {% include "overlays/sync.html" %}
-     {% include "overlays/filter.html" %}
-  </div>
-  <script src="{{ url_for('static', filename='vendor/tabler/tabler.min.js') }}"></script>
-  <script type="module" src="{{ url_for('static', filename='js/library/app.js') }}"></script>
-</body>
+    <div id="library-overlays">{% include "overlays/sync.html" %} {% include "overlays/filter.html" %}</div>
+    <script src="{{ url_for('static', filename='vendor/tabler/tabler.min.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/library/app.js') }}"></script>
+  </body>
 </html>

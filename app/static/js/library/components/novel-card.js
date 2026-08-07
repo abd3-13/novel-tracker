@@ -17,7 +17,7 @@ export function renderNovelCard(novel) {
   const status = STATUS_STYLE[novel.status] ?? STATUS_STYLE.Reading;
 
   const percent = novel.chapters.online > 0 ? Math.round((novel.chapters.local / novel.chapters.online) * 100) : 0;
-  const cover = 'cover.webp';
+  const cover = novel.cover.url || 'cover.webp';
   // TODO: Add a process in which to check which meta can be show and which meta should be hidden, and then render the meta accordingly. For now, manually set the metaConfig to show only the meta that is enabled. This will be done in the future.
   const metaConfig = [
     {
@@ -71,8 +71,8 @@ export function renderNovelCard(novel) {
   return `
   <div class="col">
     <div class="card novel-card bg-transparent border-0 shadow h-100" data-id="${novel.id}">
-      <div class="position-relative">
-        <img src="static/img/cover/${cover}" class="card-img-top rounded-1">
+      <div class="position-relative novel-cover">
+        <img src="static/img/cover/${cover}" class="novel-cover-img card-img-top rounded-1" onerror="this.onerror=null; this.src='static/img/cover/cover.webp';">
         <div class="nt-cover-top-overlay rounded-top-1"></div>
         ${unread > 0 ? ` <span class="badge bg-red text-white position-absolute top-0 start-0 m-2">+${unread}</span> ` : ''}
         <div class="badge bg-dark-lt position-absolute top-0 end-0 me-1">

@@ -8,7 +8,9 @@ export const library = {
   visible: [],
 
   // Selected novels
-  ids: [],
+  ids: new Set(),
+  selectionMode: false,
+  onSelectionChange: null,
 
   // UI State
   search: '',

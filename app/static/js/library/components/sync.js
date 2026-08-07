@@ -10,15 +10,13 @@ const syncConfig = {
   ids: []
 };
 
-function updateSyncConfig(library) {
+function updateSyncConfig() {
   syncConfig.source = document.querySelector('input[name="sync-source"]:checked').value;
 
   syncConfig.mode = document.getElementById('sync-mode').value;
 
   syncConfig.dryRun = document.getElementById('sync-dry-run').checked;
   syncConfig.force = document.getElementById('sync-force').checked;
-
-  syncConfig.ids = library.ids;
 }
 
 export function initSyncPanel(library) {
@@ -134,6 +132,37 @@ function updateMetadataToggle() {
   icon.className = allSelected ? 'ti ti-deselect text-primary' : 'ti ti-select-all';
 }
 
+function setSyncButtonState(state) {
+  const button = document.getElementById('sync-start');
+
+  const states = {
+    idle: {
+      disabled: false,
+      html: '<i class="ti ti-refresh me-1"></i> Synchronize'
+    },
+
+    loading: {
+      disabled: true,
+      html: '<span class="spinner-border spinner-border-sm me-1"></span> Synchronizing...'
+    },
+
+    success: {
+      disabled: true,
+      html: '<i class="ti ti-check me-1"></i> Synchronized'
+    },
+
+    error: {
+      disabled: true,
+      html: '<i class="ti ti-alert-circle me-1"></i> Failed'
+    }
+  };
+
+  const config = states[state];
+
+  button.disabled = config.disabled;
+  button.innerHTML = config.html;
+}
+
 function collectJob() {
   return {
     source: syncConfig.source,
@@ -146,18 +175,30 @@ function collectJob() {
 
     fields: Array.from(document.querySelectorAll('.sync-field:checked')).map(cb => cb.value),
 
-    novels: syncConfig.ids
+    novels: [...library.ids]
   };
 }
 
 async function startSync() {
+  setSyncButtonState('loading');
   const job = collectJob();
 
   try {
     const result = await runSync(job);
 
+    setSyncButtonState('success');
+
+    setTimeout(() => {
+      setSyncButtonState('idle');
+    }, 1500);
+
     console.log(result);
   } catch (err) {
     console.error(err);
+    setSyncButtonState('error');
+
+    setTimeout(() => {
+      setSyncButtonState('idle');
+    }, 2000);
   }
 }
