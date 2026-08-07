@@ -1,7 +1,7 @@
 import logging
 
-from flask import Blueprint, jsonify, render_template
-from flask_login import current_user, login_required  # type: ignore
+from flask import Blueprint, jsonify, render_template, request
+from flask_login import current_user, login_required
 
 from app.sync.metadata import FIELDS
 from app.utils import db
@@ -84,7 +84,7 @@ def library():
     return render_template("library.html", settings=settings)
 
 
-@main_bp.route("/api/library")
+@main_bp.route("/api/v1/library")
 @login_required
 def api_library():
 
@@ -95,7 +95,7 @@ def api_library():
     return jsonify({"data": library})
 
 
-@main_bp.route("/api/sync/registry")
+@main_bp.route("/api/v1/sync/registry")
 @login_required
 def api_sync_registry():
     return jsonify(
@@ -105,3 +105,16 @@ def api_sync_registry():
             if field.visible and field.enabled
         ]
     )
+
+
+@main_bp.route("/api/v1/sync", methods=["POST"])
+@login_required
+def api_sync():
+    job = request.get_json(silent=True)
+
+    if not job:
+        return jsonify({"error": "invalid or missing JSON body"}), 400
+
+    print(f"recive sync api: ${job}")
+
+    return jsonify("")

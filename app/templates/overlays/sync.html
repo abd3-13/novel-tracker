@@ -1,141 +1,77 @@
-<div class="offcanvas offcanvas-end"
-     tabindex="-1"
-     id="sync-offcanvas"
-     style="width:520px;">
-
+<div class="offcanvas offcanvas-end" tabindex="-1" id="sync-offcanvas" style="width: 520px">
   <div class="offcanvas-header">
     <h2 class="offcanvas-title">
       <i class="ti ti-refresh me-2"></i>
       Synchronization
     </h2>
-
-    <button type="button"
-            class="btn-close"
-            data-bs-dismiss="offcanvas"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
   </div>
 
   <div class="offcanvas-body">
-
     <!-- ========================================================= -->
-    <!-- Source -->
+    <!-- Configuration -->
     <!-- ========================================================= -->
 
-    <div class="card mb-3">
+    <div class="mb-4">
+      <div class="row g-3 align-items-end">
+        <!-- Source -->
+        <div class="col-6">
+          <label class="form-label">Source</label>
 
-      <div class="card-header">
-        <h3 class="card-title mb-0">Source</h3>
+          <div class="form-selectgroup d-flex flex-wrap p-0 m-0">
+            <label class="form-selectgroup-item w-50 p-0 m-0">
+              <input type="radio" name="sync-source" value="local" class="form-selectgroup-input" checked />
+              <span class="form-selectgroup-label d-flex rounded-0">
+                <i class="fs-2 ti ti-file"></i>
+                Local
+              </span>
+            </label>
+
+            <label class="form-selectgroup-item w-50 p-0 m-0">
+              <input type="radio" name="sync-source" value="online" class="form-selectgroup-input" />
+              <span class="form-selectgroup-label d-flex rounded-0">
+                <i class="fs-2 ti ti-world"></i>
+                Online
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Mode -->
+        <div class="col-6">
+          <label class="form-label">Mode</label>
+
+          <select class="form-select" id="sync-mode">
+            <option value="fill_missing">Fill Missing</option>
+            <option value="overwrite">Overwrite</option>
+            <option value="skip_existing">Skip Existing</option>
+            <option value="only_changed">Only Changed</option>
+          </select>
+        </div>
       </div>
-
-      <div class="card-body">
-
-        <label class="form-check">
-          <input class="form-check-input"
-                 type="radio"
-                 name="sync-source"
-                 value="local">
-
-          <span class="form-check-label">
-            Local EPUB
-          </span>
-        </label>
-
-        <label class="form-check mt-2">
-          <input class="form-check-input"
-                 type="radio"
-                 name="sync-source"
-                 value="online"
-                 checked>
-
-          <span class="form-check-label">
-            Online
-          </span>
-        </label>
-
-      </div>
-
     </div>
-
-    <!-- ========================================================= -->
-    <!-- Mode -->
-    <!-- ========================================================= -->
-
-    <div class="card mb-3">
-
-      <div class="card-header">
-        <h3 class="card-title mb-0">Mode</h3>
-      </div>
-
-      <div class="card-body">
-
-        <label class="form-check">
-          <input class="form-check-input"
-                 type="radio"
-                 name="sync-mode"
-                 value="fill_missing"
-                 checked>
-
-          <span class="form-check-label">
-            Fill Missing
-          </span>
-        </label>
-
-        <label class="form-check mt-2">
-          <input class="form-check-input"
-                 type="radio"
-                 name="sync-mode"
-                 value="overwrite">
-
-          <span class="form-check-label">
-            Overwrite
-          </span>
-        </label>
-
-        <label class="form-check mt-2">
-          <input class="form-check-input"
-                 type="radio"
-                 name="sync-mode"
-                 value="skip_existing">
-
-          <span class="form-check-label">
-            Skip Existing
-          </span>
-        </label>
-
-        <label class="form-check mt-2">
-          <input class="form-check-input"
-                 type="radio"
-                 name="sync-mode"
-                 value="only_changed">
-
-          <span class="form-check-label">
-            Only Changed
-          </span>
-        </label>
-
-      </div>
-
-    </div>
-
     <!-- ========================================================= -->
     <!-- Metadata -->
     <!-- ========================================================= -->
 
     <div class="card mb-3">
-
-      <div class="card-header">
+      <div class="card-header d-flex align-items-center justify-content-between">
         <h3 class="card-title mb-0">Metadata</h3>
+        <input type="checkbox" id="metadata-toggle" class="d-none" />
+        <label
+          for="metadata-toggle"
+          class="fs-1 cursor-pointer user-select-none"
+          data-bs-toggle="tooltip"
+          title="Select All">
+          <i id="metadata-toggle-icon" class="ti ti-select-all"></i>
+        </label>
       </div>
 
       <div class="card-body">
-
         <div id="sync-metadata">
-
           <!-- generated by sync.js -->
-
         </div>
-
       </div>
-
     </div>
 
     <!-- ========================================================= -->
@@ -143,98 +79,29 @@
     <!-- ========================================================= -->
 
     <div class="card mb-3">
-
-      <div class="card-header">
-        <h3 class="card-title mb-0">Options</h3>
-      </div>
+      <div class="card-header"><h3 class="card-title mb-0">Options</h3></div>
 
       <div class="card-body">
-
         <label class="form-check">
-
-          <input class="form-check-input"
-                 id="sync-dry-run"
-                 type="checkbox">
-
-          <span class="form-check-label">
-            Dry Run
-          </span>
-
+          <input class="form-check-input" id="sync-dry-run" type="checkbox" />
+          <span class="form-check-label">Dry Run</span>
         </label>
 
         <label class="form-check mt-2">
-
-          <input class="form-check-input"
-                 id="sync-force"
-                 type="checkbox">
-
-          <span class="form-check-label">
-            Force
-          </span>
-
+          <input class="form-check-input" id="sync-force" type="checkbox" />
+          <span class="form-check-label">Force</span>
         </label>
-
       </div>
-
     </div>
 
-    <!-- ========================================================= -->
-    <!-- Summary -->
-    <!-- ========================================================= -->
-
-    <div class="card">
-
-      <div class="card-header">
-        <h3 class="card-title mb-0">Summary</h3>
+    <div class="offcanvas-footer p-3 border-top">
+      <div class="d-flex justify-content-end gap-2">
+        <button class="btn" data-bs-dismiss="offcanvas">Cancel</button>
+        <button id="sync-start" class="btn btn-primary">
+          <i class="ti ti-refresh me-1"></i>
+          Synchronize
+        </button>
       </div>
-
-      <div class="card-body">
-
-        <table class="table table-sm table-borderless mb-0">
-
-          <tr>
-            <td>Source</td>
-            <td id="sync-summary-source">Online</td>
-          </tr>
-
-          <tr>
-            <td>Mode</td>
-            <td id="sync-summary-mode">Fill Missing</td>
-          </tr>
-
-          <tr>
-            <td>Fields</td>
-            <td id="sync-summary-fields">0</td>
-          </tr>
-
-        </table>
-
-      </div>
-
     </div>
-
   </div>
-
-  <div class="offcanvas-footer p-3 border-top">
-
-    <div class="d-flex justify-content-end gap-2">
-
-      <button class="btn"
-              data-bs-dismiss="offcanvas">
-        Cancel
-      </button>
-
-      <button id="sync-start"
-              class="btn btn-primary">
-
-        <i class="ti ti-refresh me-1"></i>
-
-        Synchronize
-
-      </button>
-
-    </div>
-
-  </div>
-
 </div>

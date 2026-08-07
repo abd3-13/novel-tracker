@@ -1,65 +1,81 @@
+// Global state
+const syncConfig = {
+  source: 'local',
+  mode: 'fill_missing',
+  dryRun: false,
+  force: false
+};
+
+function updateSyncConfig() {
+  console.count('updateSyncConfig triggerd');
+  syncConfig.source = document.querySelector('input[name="sync-source"]:checked').value;
+
+  syncConfig.mode = document.getElementById('sync-mode').value;
+
+  syncConfig.dryRun = document.getElementById('sync-dry-run').checked;
+  syncConfig.force = document.getElementById('sync-force').checked;
+}
+
 export function initSyncPanel() {
-  console.log("Sync initialized");
+  console.count('Sync initialized');
 
   renderMetadata();
 
-  bindEvents();
+  updateSyncConfig();
 
-  updateSummary();
+  bindEvents();
+}
+
+let syncFields = [];
+
+function isFieldDisabled(field, source) {
+  return !field.providers.includes(source);
+}
+
+function renderPills() {
+  const source = syncConfig.source;
+
+  document.querySelectorAll('.sync-field').forEach(cb => {
+    const field = syncFields.find(f => f.id === cb.value);
+    const disabled = isFieldDisabled(field, source);
+
+    cb.disabled = disabled;
+
+    if (disabled) cb.checked = false;
+  });
+
+  updateMetadataToggle();
 }
 
 async function renderMetadata() {
-  const container = document.getElementById("sync-metadata");
+  const container = document.getElementById('sync-metadata');
 
   container.innerHTML = `<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-muted"></div></div>`;
 
   try {
-    const response = await fetch("/api/sync/registry");
+    // TODO: move the api block to api.js
+    const response = await fetch('/api/v1/sync/registry');
 
-    if (!response.ok) throw new Error("Failed to load metadata registry.");
+    if (!response.ok) throw new Error('Failed to load metadata registry.');
 
-    const fields = await response.json();
+    syncFields = await response.json();
+    const source = syncConfig.source;
 
     container.innerHTML = `
-      <label class="form-check mb-3">
-        <input class="form-check-input" id="sync-select-all" type="checkbox" checked>
-        <span class="form-check-label fw-semibold">Select All</span>
-      </label>
-      ${fields
-        .map(
-          (field) => `
-          <label class="form-check mb-3">
-              <input class="form-check-input sync-field" type="checkbox" value="${field.id}" ${field.default ? "checked" : ""}>
-              <div class="form-check-label">
-                  <div class="d-flex align-items-center">
-                      <i class="ti ti-${field.icon} me-2 text-muted"></i>
-                      <span>${field.name}</span>
-                      <span class="ms-2">
-                          ${field.providers.includes("local") ? `<span class="badge bg-blue-lt"><i class="ti ti-file text-muted"></i></span>` : ""}
-                          ${field.providers.includes("online") ? `<span class="badge bg-green-lt"><i class="ti ti-world text-muted"></i></span>` : ""}
-                      </span>
-                  </div>
-                  <div class="text-muted small ms-4">${field.description}</div>
-              </div>
-          </label>
-      `,
-        )
-        .join("")}
-      `;
-
-    document
-      .getElementById("sync-select-all")
-      .addEventListener("change", (e) => {
-        document
-          .querySelectorAll(".sync-field")
-          .forEach((cb) => (cb.checked = e.target.checked));
-
-        updateSummary();
-      });
-
-    document.querySelectorAll(".sync-field").forEach((cb) => {
-      cb.addEventListener("change", updateSummary);
-    });
+      <div class="form-selectgroup d-flex flex-wrap gap-0">
+        ${syncFields
+          .map(field => {
+            const isdisabled = isFieldDisabled(field, source);
+            return `
+              <label class="form-selectgroup-item">
+                <input type="checkbox" class="form-selectgroup-input sync-field" value="${field.id}" ${isdisabled ? 'disabled' : ''}>
+                <span class="form-selectgroup-label d-flex align-items-center px-3"> <i class="ti ti-${field.icon} me-2"></i>${field.name}</span>
+              </label>
+            `;
+          })
+          .join('')}
+      </div>
+    `;
   } catch (err) {
     console.error(err);
     container.innerHTML = `<div class="alert alert-danger mb-0"><i class="ti ti-alert-circle me-2"></i>Failed to load synchronization metadata.</div>`;
@@ -67,49 +83,76 @@ async function renderMetadata() {
 }
 
 function bindEvents() {
-  document.querySelectorAll("#sync-offcanvas input").forEach((input) => {
-    input.addEventListener("change", updateSummary);
-  });
+  const offcanvas = document.getElementById('sync-offcanvas');
 
-  document.getElementById("sync-start").addEventListener("click", startSync);
+  offcanvas.querySelectorAll('input, select').forEach(el => el.addEventListener('change', updateSyncConfig));
+
+  document.querySelectorAll('input[name="sync-source"]').forEach(el => el.addEventListener('change', onSourceChanged));
+
+  document.getElementById('metadata-toggle').addEventListener('change', onMetadataToggle);
+
+  document.getElementById('sync-metadata').addEventListener('change', updateMetadataToggle);
+
+  document.getElementById('sync-start').addEventListener('click', startSync);
 }
 
-function updateSummary() {
-  const source = document
-    .querySelector("input[name='sync-source']:checked")
-    ?.nextElementSibling.textContent.trim();
+function onSourceChanged() {
+  updateSyncConfig();
+  renderPills();
+}
 
-  const mode = document
-    .querySelector("input[name='sync-mode']:checked")
-    ?.nextElementSibling.textContent.trim();
+function onMetadataToggle(e) {
+  document.querySelectorAll('.sync-field:not(:disabled)').forEach(cb => (cb.checked = e.target.checked));
 
-  const fields = document.querySelectorAll(
-    "#sync-metadata input:checked",
-  ).length;
+  updateMetadataToggle();
+}
 
-  document.getElementById("sync-summary-source").textContent = source ?? "-";
+function updateMetadataToggle() {
+  const enabled = document.querySelectorAll('.sync-field:not(:disabled)');
+  const checked = document.querySelectorAll('.sync-field:not(:disabled):checked');
 
-  document.getElementById("sync-summary-mode").textContent = mode ?? "-";
+  const toggle = document.getElementById('metadata-toggle');
+  const icon = document.getElementById('metadata-toggle-icon');
 
-  document.getElementById("sync-summary-fields").textContent = fields;
+  const allSelected = enabled.length && enabled.length === checked.length;
+
+  toggle.checked = allSelected;
+
+  icon.className = allSelected ? 'ti ti-deselect text-primary' : 'ti ti-select-all';
 }
 
 function collectJob() {
   return {
-    source: document.querySelector("input[name='sync-source']:checked")?.value,
+    source: syncConfig.source,
 
-    mode: document.querySelector("input[name='sync-mode']:checked")?.value,
+    mode: syncConfig.mode,
 
-    dry_run: document.getElementById("sync-dry-run").checked,
+    dry_run: syncConfig.dryRun,
 
-    force: document.getElementById("sync-force").checked,
+    force: syncConfig.force,
 
-    fields: [],
+    fields: Array.from(document.querySelectorAll('.sync-field:checked')).map(cb => cb.value)
   };
 }
 
-function startSync() {
+async function startSync() {
   const job = collectJob();
 
-  console.log(job);
+  try {
+    const response = await fetch('/api/v1/sync', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(job)
+    });
+
+    if (!response.ok) throw new Error(await response.text());
+
+    const result = await response.json();
+
+    console.log(result);
+  } catch (err) {
+    console.error(err);
+  }
 }

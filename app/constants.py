@@ -1,8 +1,8 @@
 """
-Shared synchronization constants.
+Shared constants.
 
 These define the common vocabulary used throughout the
-synchronization engine.
+Codebase.
 
 They are intentionally limited to identifiers that are shared
 between multiple modules.

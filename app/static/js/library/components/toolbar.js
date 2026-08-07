@@ -15,7 +15,7 @@ function renderSortMenu(sort) {
 export function updateSortButton(sort) {
     const arrow = sort.direction === "asc" ? "ti-sort-ascending" : "ti-sort-descending";
     const button = document.getElementById("library-sort-button");
-    button.innerHTML = `<i class="ti ti-${sort.icon} me-1"></i>Sort : ${sort.label} <i class="ti ${arrow} ms-1"></i>`;
+    button.innerHTML = `<i class="ti ti-${sort.icon} me-1"></i><span class="d-none d-md-inline">Sort : ${sort.label}</span> <i class="ti ${arrow} ms-1"></i>`;
 
     // Remove previous active item
     document.querySelectorAll(".library-sort-item").forEach(item => {
@@ -63,11 +63,11 @@ export function renderToolbar(library) {
           </div>
         </div>
         <div class="dropdown col-auto">
-          <button id="library-sort-button" class="btn btn-outline-secondary" data-bs-toggle="dropdown"><i class="ti ti-${library.sort.icon} me-1"></i><span>Sort: ${library.sort.label}</span></button>
+          <button id="library-sort-button" class="btn btn-outline-secondary" data-bs-toggle="dropdown"><i class="ti ti-${library.sort.icon} me-1"></i><span class="d-none d-md-inline">Sort: ${library.sort.label}</span></button>
           <div class="dropdown-menu" id="sort-dropdown-menu">${renderSortMenu(library.sort)}</div>
         </div>
-        <div class="col-auto"><button class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#library-filter-panel"><i class="ti ti-filter me-1"></i>Filter</button></div>
-        <div class="col-auto"><button class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#sync-offcanvas"><i class="ti ti-refresh me-1"></i>Synchronize</button></div>
+        <div class="col-auto"><button id="toolbar-filter" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#library-filter-panel"><i class="ti ti-filter me-1"></i><span class="d-none d-md-inline">Filter</span></button></div>
+        <div class="col-auto"><button id="toolbar-sync" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#sync-offcanvas"><i class="ti ti-refresh me-1"></i><span class="d-none d-md-inline">Synchronize</span></button></div>
       </div>
     `;
 }
