@@ -32,7 +32,7 @@ export function renderLibrary() {
 
   initFilterPanel(library);
 
-  initSyncPanel();
+  initSyncPanel(library);
 
   bindToolbar(
     search => {
@@ -70,7 +70,7 @@ export function updateLibrary() {
 
   const library_container = document.getElementById('library-content');
   renderGrid(library_container, library.visible);
-  enableSelection(library_container);
+  enableSelection(library_container, library);
 }
 
 init();

@@ -12,12 +12,20 @@ export function renderGrid(container, novels) {
   });
 }
 
-export function enableSelection(container) {
+export function enableSelection(container, library) {
   container.addEventListener('click', e => {
     const card = e.target.closest('.novel-card');
     if (!card) return;
 
+    const id = Number(card.dataset.id);
     card.classList.toggle('selected');
+    if (card.classList.contains('selected')) {
+      if (!library.ids.includes(id)) {
+        library.ids.push(id);
+      }
+    } else {
+      library.ids = library.ids.filter(x => x !== id);
+    }
   });
 }
 

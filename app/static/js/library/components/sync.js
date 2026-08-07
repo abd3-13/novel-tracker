@@ -1,3 +1,4 @@
+import { library } from '../state.js';
 import { getSyncRegistry, runSync } from './../api.js';
 
 // Global state
@@ -5,22 +6,25 @@ const syncConfig = {
   source: 'local',
   mode: 'fill_missing',
   dryRun: false,
-  force: false
+  force: false,
+  ids: []
 };
 
-function updateSyncConfig() {
+function updateSyncConfig(library) {
   syncConfig.source = document.querySelector('input[name="sync-source"]:checked').value;
 
   syncConfig.mode = document.getElementById('sync-mode').value;
 
   syncConfig.dryRun = document.getElementById('sync-dry-run').checked;
   syncConfig.force = document.getElementById('sync-force').checked;
+
+  syncConfig.ids = library.ids;
 }
 
-export function initSyncPanel() {
+export function initSyncPanel(library) {
   renderMetadata();
 
-  updateSyncConfig();
+  updateSyncConfig(library);
 
   bindEvents();
 }
@@ -139,10 +143,10 @@ function collectJob() {
     dry_run: syncConfig.dryRun,
 
     force: syncConfig.force,
-    // TODO: add ui selection mode so novels can be id of the selected librray
-    novels: [13],
 
-    fields: Array.from(document.querySelectorAll('.sync-field:checked')).map(cb => cb.value)
+    fields: Array.from(document.querySelectorAll('.sync-field:checked')).map(cb => cb.value),
+
+    novels: syncConfig.ids
   };
 }
 
