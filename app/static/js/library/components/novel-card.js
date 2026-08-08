@@ -11,6 +11,58 @@ function renderMeta(icon, value, title = '') {
         <div class="nt-meta-item" title="${title}"><i class="ti ti-${icon}"></i><span>${value}</span></div>`;
 }
 
+export function initNovelTitleScrolling() {
+  const mobileQuery = window.matchMedia('(max-width: 767.98px)');
+
+  if (!mobileQuery.matches) {
+    return;
+  }
+
+  const titles = document.querySelectorAll('.nt-title-scroll');
+
+  if (!titles.length) {
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        const title = entry.target;
+        const container = title.parentElement;
+
+        if (!entry.isIntersecting) {
+          title.classList.remove('is-scrolling');
+          return;
+        }
+
+        requestAnimationFrame(() => {
+          const overflow = title.scrollWidth - container.clientWidth;
+
+          // Title fits — nothing to scroll
+          if (overflow <= 2) {
+            title.classList.remove('is-scrolling');
+            return;
+          }
+
+          title.style.setProperty('--nt-scroll-distance', `-${overflow}px`);
+
+          // Longer titles get more time
+          const duration = Math.min(10, Math.max(5, overflow / 15));
+
+          title.style.setProperty('--nt-scroll-duration', `${duration}s`);
+
+          title.classList.add('is-scrolling');
+        });
+      });
+    },
+    {
+      threshold: 0.75
+    }
+  );
+
+  titles.forEach(title => observer.observe(title));
+}
+
 export function renderNovelCard(novel) {
   const unread = novel.reading.unread;
 
@@ -88,7 +140,7 @@ export function renderNovelCard(novel) {
         </div>
       </div>
       <div class="card-body p-2">
-        <div class="fw-bold text-truncate" data-bs-toggle="tooltip" data-bs-placement="bottom" title="${novel.title}">${novel.title}</div>
+        <div class="nt-title-container" data-bs-toggle="tooltip" data-bs-placement="bottom" title="${novel.title}"><div class="nt-title-scroll fw-bold">${novel.title}</div></div>
         <div class="text-secondary text-truncate text-end small">${novel.author}</div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 // static/js/library/views/grid.js
 
-import { renderNovelCard } from '../components/novel-card.js';
+import { renderNovelCard, initNovelTitleScrolling } from '../components/novel-card.js';
 import { library } from './../state.js';
 
 export function renderGrid(container, novels) {
@@ -11,4 +11,6 @@ export function renderGrid(container, novels) {
   novels.forEach(novel => {
     grid.insertAdjacentHTML('beforeend', renderNovelCard(novel));
   });
+
+  initNovelTitleScrolling();
 }
