@@ -79,7 +79,7 @@ export function renderNovelCard(novel) {
           <a class="btn btn-icon btn-sm p-0 ms-1 border-0 bg-transparent" href="${novel.source.url}" role="button">🌐</a>
         </div>
         <div class="position-absolute top-50 end-0 translate-middle-y me-2 d-flex flex-column align-items-end gap-1">${optionalMeta}</div>
-        <div class="position-absolute start-0 ms-2" style="bottom: 20px;"><span class="badge ${status.bg} ${status.text}">${novel.status}</span></div>
+        <div class="position-absolute start-0 ms-2" style="bottom: 20px;"><span class="badge ${status.bg} ${status.text} fs-6">${novel.status}</span></div>
         <div class="position-absolute bottom-0 start-0 end-0">
           <div class="progress rounded-0 position-relative" style="height: 15px;">
               <div class="progress-bar fw-bold" style="width:${percent}%"></div>

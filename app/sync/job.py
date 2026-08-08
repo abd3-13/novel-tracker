@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.constants import Default, LogLevel, Provider, SyncMode
+from app.sync.metadata import FIELDS
 
 
 @dataclass(slots=True)
@@ -46,14 +47,15 @@ class SyncJob:
     event_handler: Callable | None = None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SyncJob":
+    def from_dict(cls, data: dict[str, Any], table: str | None = None) -> "SyncJob":
         if not isinstance(data, dict):
             raise TypeError("Sync job must be an object.")
 
         source = data.get("source", Provider.LOCAL)
         mode = data.get("mode", SyncMode.FILL_MISSING)
         fields = data.get("fields", [])
-        table = data.get("table", Default.NOVEL_TABLE)
+        dry_run = data.get("dry_run", False)
+        force = data.get("force", False)
 
         try:
             source = Provider(source)
@@ -64,6 +66,11 @@ class SyncJob:
             mode = SyncMode(mode)
         except ValueError:
             raise ValueError(f"Invalid sync mode: {mode}") from None
+
+        unknown = [value for value in fields if value not in FIELDS]
+
+        if unknown:
+            raise ValueError(f"Unknown metadata fields: {', '.join(unknown)}")
 
         if not isinstance(fields, list):
             raise TypeError("Sync fields must be a list.")
@@ -79,12 +86,18 @@ class SyncJob:
         if not all(isinstance(value, int) for value in novels):
             raise ValueError("Novel IDs must be integers.")
 
+        if not isinstance(dry_run, bool):
+            raise TypeError("dry_run must be a boolean.")
+
+        if not isinstance(force, bool):
+            raise TypeError("force must be a boolean.")
+
         return cls(
-            table=table,
+            table=table or Default.NOVEL_TABLE,
             novels=novels,
             fields=fields,
             source=source,
             mode=mode,
-            dry_run=bool(data.get("dry_run", False)),
-            force=bool(data.get("force", False)),
+            dry_run=dry_run,
+            force=force,
         )

@@ -41,7 +41,7 @@ export async function runSync(job) {
 
   const result = await response.json();
 
-  if (!response.ok) throw new Error(result.error || 'Synchronization failed.');
+  if (!response.ok) throw new Error(result.message || result.error || 'Synchronization failed.');
 
   return result;
 }

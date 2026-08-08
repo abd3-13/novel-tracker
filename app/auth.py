@@ -10,7 +10,7 @@ from flask import (
 from flask_login import UserMixin, current_user, login_user, logout_user  # type: ignore
 from werkzeug.security import check_password_hash
 
-import app.utils.db as db
+from app.utils import db
 
 auth_bp = Blueprint("auth", __name__, url_prefix="")
 
@@ -21,9 +21,6 @@ class User(UserMixin):
         self.username = username
         self.role = role
         self.active = active
-
-    def is_active(self):
-        return self.active == 1
 
 
 def load_user(user_id):

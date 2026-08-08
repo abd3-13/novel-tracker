@@ -1,6 +1,6 @@
 import { library } from '../state.js';
 import { getSyncRegistry, runSync } from './../api.js';
-
+import { showNotification } from './../../notifi.js';
 // Global state
 const syncConfig = {
   source: 'local',
@@ -185,7 +185,7 @@ async function startSync() {
 
   try {
     const result = await runSync(job);
-
+    showNotification(result.message, result.category);
     setSyncButtonState('success');
 
     setTimeout(() => {
@@ -194,6 +194,7 @@ async function startSync() {
 
     console.log(result);
   } catch (err) {
+    showNotification(err.message || 'Synchronization failed.', 'error');
     console.error(err);
     setSyncButtonState('error');
 

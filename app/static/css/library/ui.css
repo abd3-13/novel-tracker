@@ -66,6 +66,11 @@
   object-fit: cover;
 }
 
+#notification-container .alert {
+  box-shadow: var(--tblr-shadow-card);
+  background-color: var(--tblr-bg-surface);
+}
+
 /* ==========================================================
    Filter Panel
    ========================================================== */

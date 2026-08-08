@@ -116,20 +116,35 @@ def api_sync():
         data = request.get_json(silent=True)
         if data is None:
             raise ValueError("Invalid or missing JSON payload")
-        data["table"] = db.get_user_table(current_user)
-        job = SyncJob.from_dict(data)
+
+        job = SyncJob.from_dict(data, table=db.get_user_table(current_user))
         runner = SyncRunner()
         results = runner.run(job)
     except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+        return jsonify(
+            {
+                "success": False,
+                "message": str(exc),
+                "category": "warning",
+            }
+        ), 400
     except Exception as e:  # noqa: BLE001
         print(f"Synchronization failed, {e}")
-        return jsonify({"error": "Synchronization failed"}), 500
+        return jsonify(
+            {
+                "success": False,
+                "message": "Synchronization failed.",
+                "category": "error",
+            }
+        ), 500
 
     print(f"received sync job: {job}")
 
     return jsonify(
         {
+            "success": True,
+            "message": "Synchronization completed successfully.",
+            "category": "success",
             "results": results,
         }
     )
