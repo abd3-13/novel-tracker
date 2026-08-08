@@ -145,13 +145,11 @@ class SyncRunner:
 
         updated = sum(1 for r in results if r and r.get("updated"))
 
-        # failed = sum(1 for r in results if r and "error" in r)
+        errors = sum(1 for r in results if r and r.get("errors"))
 
         skipped = sum(
-            1 for r in results if r and not r.get("updated") and "error" not in r
+            1 for r in results if r and not r.get("updated") and not r.get("errors")
         )
-
-        errors = sum(len(r.get("errors", [])) for r in results if r)
 
         warnings = sum(len(r.get("warnings", [])) for r in results if r)
 
@@ -177,7 +175,10 @@ class SyncRunner:
         return {
             "id": novel[MetadataKey.ID],
             "title": novel[MetadataKey.TITLE],
-            "error": str(error),
+            "updated": False,
+            "changes": {},
+            "errors": [str(error)],
+            "warnings": [],
         }
 
     def _emit(self, job, event_type: str, **data):
