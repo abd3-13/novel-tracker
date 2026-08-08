@@ -6,7 +6,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/tabler/tabler.min.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/tabler/tabler-icons.min.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/library/ui.css') }}" />
-    <script type="module" src="{{ url_for('static', filename='js/notifi.js') }}"></script>
   </head>
   <body>
     <div class="page-wrapper">
@@ -40,13 +39,7 @@
     <script src="{{ url_for('static', filename='vendor/tabler/tabler.min.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/library/app.js') }}"></script>
     <script>
-      /* eslint-disable */
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-          showNotification("{{ message|safe }}", "{{ category }}");
-        {% endfor %}
-        {% endwith %}
-      /* eslint-enable */
+      window.flashMessages = {{ get_flashed_messages(with_categories=true) | tojson }};
     </script>
   </body>
 </html>

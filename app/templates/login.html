@@ -1,53 +1,62 @@
-<!DOCTYPE html>
+<!doctype html>
 <html class="dark" data-bs-theme="dark">
-<head>
-  <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.8.0">
-  <meta charset="UTF-8">
-  <title>Novel Tracker - Login</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Tabler -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/tabler/tabler.min.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/tabler/tabler-icons.min.css') }}">
-  <!-- App styles -->
-  <script type="text/javascript" src="{{ url_for('static', filename='js/notifi.js') }}"></script>
-</head>
-<body class="d-flex flex-column">
-  <div class="page page-center">
-  <div class="container container-tight py-4">
-    <div class="card card-md">
-    <div class="card-body">
-      <!-- Brand -->
-      <div class="text-center mb-4">
-      <div class="avatar avatar-xl mx-auto mb-3 bg-primary text-white"><i class="ti ti-books" style="font-size: 3.4rem;"></i></div>
-      <h2 class="h2">Novel Tracker v2</h2>
-      <div class="text-muted">Sign in to continue to your library</div>
-      </div><!-- Login Form -->
-      <form id="login-form" action="{{ url_for('auth.login') }}">
-      <div class="mb-3">
-        <label class="form-label">Username</label> <input type="text" name="username" class="form-control" placeholder="Enter username" autocomplete="username" required="">
+  <head>
+    <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.8.0" />
+    <meta charset="UTF-8" />
+    <title>Novel Tracker - Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Tabler -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/tabler/tabler.min.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/tabler/tabler-icons.min.css') }}" />
+  </head>
+  <body class="d-flex flex-column">
+    <div class="page page-center">
+      <div class="container container-tight py-4">
+        <div class="card card-md">
+          <div class="card-body">
+            <!-- Brand -->
+            <div class="text-center mb-4">
+              <div class="avatar avatar-xl mx-auto mb-3 bg-primary text-white">
+                <i class="ti ti-books" style="font-size: 3.4rem"></i>
+              </div>
+              <h2 class="h2">Novel Tracker v2</h2>
+              <div class="text-muted">Sign in to continue to your library</div>
+            </div>
+            <!-- Login Form -->
+            <form id="login-form" action="{{ url_for('auth.login') }}">
+              <div class="mb-3">
+                <label class="form-label">Username</label>
+                <input
+                  type="text"
+                  name="username"
+                  class="form-control"
+                  placeholder="Enter username"
+                  autocomplete="username"
+                  required="" />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input
+                  type="password"
+                  name="password"
+                  class="form-control"
+                  placeholder="Enter password"
+                  autocomplete="current-password"
+                  required="" />
+              </div>
+              <div class="form-footer">
+                <button type="submit" class="btn btn-primary w-100">Login</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="text-center text-muted mt-3">Novel Tracker Library</div>
       </div>
-      <div class="mb-3"><label class="form-label">Password</label> <input type="password" name="password" class="form-control" placeholder="Enter password" autocomplete="current-password" required=""></div>
-      <div class="form-footer">
-        <button type="submit" class="btn btn-primary w-100">Login</button>
-      </div>
-      </form>
     </div>
-    </div>
-    <div class="text-center text-muted mt-3">
-    Novel Tracker Library
-    </div>
-  </div>
-  </div>
-  <div id="notification-container" class="position-fixed top-0 end-0 p-3" style="z-index:1080; width:380px;"></div>
-  <script defer src="{{ url_for('static', filename='js/login.js') }}"></script>
-  <script>
-    /* eslint-disable */
-      {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for category, message in messages %}
-        showNotification("{{ message|safe }}", "{{ category }}");
-      {% endfor %}
-      {% endwith %}
-    /* eslint-enable */
-  </script>
-</body>
+    <div id="notification-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1080; width: 380px"></div>
+    <script type="module" src="{{ url_for('static', filename='js/login.js') }}"></script>
+    <script>
+      window.flashMessages = {{ get_flashed_messages(with_categories=true) | tojson }};
+    </script>
+  </body>
 </html>

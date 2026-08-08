@@ -9,8 +9,14 @@ import { applySort } from './components/sort.js';
 import { renderNovelCard } from './components/novel-card.js';
 import { initSyncPanel } from './components/sync.js';
 import { enableSelection } from './components/selection.js';
+import { showNotification } from './../notifi.js';
 
 async function init() {
+  if (window.flashMessages) {
+    window.flashMessages.forEach(([category, message]) => {
+      showNotification(message, category);
+    });
+  }
   library.novels = await fetchNovels();
 
   renderLibrary(); // Build the UI once
