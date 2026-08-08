@@ -22,14 +22,17 @@ const titleMap = {
   info: 'Information'
 };
 
-export function showNotification(message, category = 'info', title, delay = 3) {
-  const delaySec = delay * 1000;
+const delayMap = { success: 3, error: 10, danger: 10, warning: 5, info: 4 };
+
+export function showNotification(message, category = 'info', title, delay) {
   const container = document.getElementById('notification-container');
   if (!container) return;
 
   const css = typeMap[category] || typeMap.info;
   const icon = iconMap[category] || iconMap.info;
   const heading = title || titleMap[category] || titleMap.info;
+  // Use category-specific delay when delay isn't explicitly provided const
+  delaySec = (delay ?? delayMap[category] ?? delayMap.info) * 1000;
 
   const alert = document.createElement('div');
 
