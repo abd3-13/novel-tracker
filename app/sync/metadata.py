@@ -1,7 +1,14 @@
 from dataclasses import dataclass, field
 from typing import Any, Callable  # noqa: UP035
 
-from app.constants import DatabaseColumn, Event, MetadataKey, Provider, SyncAction
+from app.constants import (
+    DatabaseColumn,
+    Event,
+    MetadataKey,
+    Provider,
+    SyncAction,
+    SyncMode,
+)
 
 from .strategy import SyncStrategy
 
@@ -96,7 +103,8 @@ def sync_cover_asset(ctx, field: MetadataField):
     Synchronize cover image.
     """
     provider = ctx.providers.get_provider(ctx.job.source)
-    cover_id = provider.fetch_cover()
+    overwrite = ctx.job.mode == SyncMode.OVERWRITE
+    cover_id = provider.fetch_cover(overwrite=overwrite)
     if cover_id:
         ctx.collector.set(field.column, cover_id)
 

@@ -129,7 +129,7 @@ class LocalProvider(BaseProvider):
 
         self.ctx.logger.debug(f"Local provider loaded {len(self.data)} fields.")
 
-    def fetch_cover(self):
+    def fetch_cover(self, overwrite=False):
         """
         Fetch the cover image from the EPUB.
         """
@@ -137,7 +137,7 @@ class LocalProvider(BaseProvider):
         self.ctx.logger.info("Fetching local cover...")
         self.ctx.emit(Event.ASSET, asset=Asset.COVER)
 
-        cover = extract_epub_cover(self.filepath)
+        cover = extract_epub_cover(self.filepath, overwrite=overwrite)
 
         if cover:
             self.ctx.logger.info(f"Cover ready: {cover}")
@@ -202,14 +202,14 @@ class OnlineProvider(BaseProvider):
 
         self.ctx.logger.debug(f"Online provider loaded {len(self.data)} fields.")
 
-    def fetch_cover(self):
+    def fetch_cover(self, overwrite=False):
         """
         Fetch the cover image from the online source.
         """
 
         self.ctx.logger.info("Fetching online cover...")
         self.ctx.emit(Event.ASSET, asset=Asset.COVER)
-        cover = _client.fetch_cover_image(self.book_id)
+        cover = _client.fetch_cover_image(self.book_id, overwrite=overwrite)
 
         if cover:
             self.ctx.logger.info(f"Cover ready: {cover}")

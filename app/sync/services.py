@@ -10,6 +10,7 @@ import tldextract
 from ebooklib import epub
 
 from app.utils import db
+from app.utils.images import convert_to_webp, get_image_format
 from app.utils.tools import normalize_filename
 
 logger = logging.getLogger(__name__)
@@ -195,9 +196,12 @@ def get_epub_metadata(epub_path: str) -> EpubMetadata:
     return _metadata_from_book(book)
 
 
-def extract_epub_cover(epub_path: str, cover_id: str | None = None) -> str:
+def extract_epub_cover(
+    epub_path: str, cover_id: str | None = None, overwrite: bool = False
+) -> str:
     """
-    Extract and save the cover image from a local EPUB file.
+    Extract the cover image from a local EPUB file,
+    convert it to WebP when necessary, and save it.
     """
 
     logger.debug("Opening EPUB: %s", epub_path)
@@ -209,30 +213,68 @@ def extract_epub_cover(epub_path: str, cover_id: str | None = None) -> str:
         meta = _metadata_from_book(book)
         cover_id = meta.cover_id
 
-    cover_id = cover_id or "nocover.webp"
+    cover_id = cover_id or "nocover"
 
     cover_dir = Path(db.get_value("COVER_PATH") or "./covers")
     cover_dir.mkdir(parents=True, exist_ok=True)
 
-    cover_path = cover_dir / cover_id
+    # Final output is always WebP.
+    cover_path = cover_dir / f"{cover_id}.webp"
 
-    if cover_path.exists():
-        logger.debug("Cover already exists: %s", cover_path)
-        return cover_id
+    if cover_path.exists() and not overwrite:
+        logger.debug("Cover already exists and overwite is False: %s", cover_path)
+        return cover_path.name
 
     logger.debug("Extracting cover image...")
-
     cover_data = _extract_cover_bytes(book)
 
     if not cover_data:
         logger.warning("No cover image found in EPUB: %s", epub_path)
         return ""
 
-    cover_path.write_bytes(cover_data)
+    # Write extracted bytes to a temporary file.
+    temp_path = cover_dir / f".{cover_id}.cover"
 
-    logger.info("Saved cover: %s", cover_path)
+    try:
+        temp_path.write_bytes(cover_data)
 
-    return cover_id
+        # Determine the actual image format from its contents.
+        image_format = get_image_format(temp_path)
+
+        logger.debug("Extracted cover format: %s", image_format)
+
+        # ---------------------------------------------------------
+        # Already WebP
+        # ---------------------------------------------------------
+        if image_format == "WEBP":
+            if cover_path.exists():
+                if not overwrite:
+                    temp_path.unlink(missing_ok=True)
+                    return cover_path.name
+                cover_path.unlink()
+
+            temp_path.rename(cover_path)
+            logger.info("Saved WebP cover: %s", cover_path)
+            return cover_path.name
+
+        # ---------------------------------------------------------
+        # Convert non-WebP image
+        # ---------------------------------------------------------
+        converted_path = convert_to_webp(
+            temp_path, quality=85, delete_original=True, overwrite=overwrite
+        )
+
+        if not converted_path:
+            logger.error("Failed to convert cover to WebP: %s", epub_path)
+            return ""
+
+        logger.info("Converted and saved cover: %s", cover_path)
+        return cover_path.name
+
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Cover extraction failed: %s", exc)
+        temp_path.unlink(missing_ok=True)
+        return ""
 
 
 def extract_local_chap(book):

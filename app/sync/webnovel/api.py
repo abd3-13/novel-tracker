@@ -11,7 +11,7 @@ from typing import Any
 import requests
 
 from app.utils import db
-from app.utils.images import download_image
+from app.utils.images import convert_to_webp, download_image
 from app.utils.tools import (
     determine_status,
     epochtohuman,
@@ -164,7 +164,9 @@ class WebnovelClient:
             return None
         return normalize_character(data)
 
-    def fetch_cover_image(self, book_id: str | None) -> str | None:
+    def fetch_cover_image(
+        self, book_id: str | None, overwrite: bool = False
+    ) -> str | None:
         """
         Download the WebNovel cover image.
         """
@@ -179,13 +181,14 @@ class WebnovelClient:
 
         cover = download_image(
             url=url,
-            filename=f"{book_id}.webp",
+            filename=f"{book_id}.cover",
             folder=Path(db.get_value("COVER_PATH") or "./"),
             dry_run=False,
         )
-
+        cover_file = Path(db.get_value("COVER_PATH") or "./") / f"{book_id}.webp"
         if cover:
             logger.info("Downloaded cover: %s", cover)
+            convert_to_webp(image_path=cover_file, overwrite=overwrite)
         else:
             logger.warning("Cover download failed: %s", book_id)
 

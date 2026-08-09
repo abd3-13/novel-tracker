@@ -9,28 +9,56 @@ IMG_OUT = 10
 logger = logging.getLogger(__name__)
 
 
-def convert_to_webp(
-    image_path: Path, quality: int = 85, delete_original: bool = True
-) -> Path | None:
-    """Convert image to WebP format."""
+def get_image_format(image_path: Path) -> str | None:
+    """Return the image format (e.g. 'WEBP', 'JPEG', 'PNG')."""
+
     if not image_path or not image_path.exists():
         return None
 
-    webp_path = image_path.with_suffix(".webp")
+    try:
+        with Image.open(image_path) as image:
+            return image.format
 
-    if webp_path.exists():
-        image_path.unlink()
-        return webp_path
+    except Exception as exc:  # noqa: BLE001
+        logger.error(
+            "Unable to determine image format for %s: %s",
+            image_path,
+            exc,
+        )
+        return None
+
+
+def convert_to_webp(
+    image_path: Path,
+    quality: int = 85,
+    delete_original: bool = True,
+    overwrite: bool = False,
+) -> Path | None:
+    """Convert an image to WebP format."""
+    if not image_path or not image_path.exists():
+        return None
+    webp_path = image_path.with_suffix(".webp")
+    # WebP already exists
+    if webp_path.exists() and not overwrite:
+        # Keep the existing WebP and remove the temporary source
+        if delete_original and image_path != webp_path:
+            image_path.unlink()
+            return webp_path
+    else:
+        # overwrite=True -> remove existing WebP first
+        webp_path.unlink()
 
     try:
         with Image.open(image_path) as img:
-            img.save(webp_path, "WEBP", quality=quality, method=6)
-
-        if delete_original:
+            img.save(
+                webp_path,
+                "WEBP",
+                quality=quality,
+                method=6,
+            )
+        if delete_original and image_path != webp_path:
             image_path.unlink()
-
-        return webp_path
-
+            return webp_path
     except Exception as exc:  # noqa: BLE001
         logger.error(f"[ERROR] WebP conversion failed: {exc}")
         return None
@@ -50,11 +78,9 @@ def download_image(
 
     filepath = folder / filename
 
-    webp_path = filepath.with_suffix(".webp")
-
     logger.debug("Downloading image: %s in to %s", filename, filepath)
 
-    if webp_path.exists() or filepath.exists():
+    if filepath.exists():
         logger.debug("Image already exists: %s", filename)
         return filename
 
