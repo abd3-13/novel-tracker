@@ -32,7 +32,7 @@ export function showNotification(message, category = 'info', title, delay) {
   const icon = iconMap[category] || iconMap.info;
   const heading = title || titleMap[category] || titleMap.info;
   // Use category-specific delay when delay isn't explicitly provided const
-  delaySec = (delay ?? delayMap[category] ?? delayMap.info) * 1000;
+  const delaySec = (delay ?? delayMap[category] ?? delayMap.info) * 1000;
 
   const alert = document.createElement('div');
 

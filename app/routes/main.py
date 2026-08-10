@@ -114,12 +114,19 @@ def api_sync_registry():
 def api_sync():
     try:
         data = request.get_json(silent=True)
+
         if data is None:
             raise ValueError("Invalid or missing JSON payload")
 
-        job = SyncJob.from_dict(data, table=db.get_user_table(current_user))
+        job = SyncJob.from_dict(
+            data,
+            table=db.get_user_table(current_user),
+        )
+
         runner = SyncRunner()
-        results = runner.run(job)
+
+        result = runner.run(job)
+
     except ValueError as exc:
         return jsonify(
             {
@@ -128,8 +135,10 @@ def api_sync():
                 "category": "warning",
             }
         ), 400
-    except Exception as e:  # noqa: BLE001
-        print(f"Synchronization failed, {e}")
+
+    except Exception as exc:  # noqa: BLE001
+        print(f"Synchronization failed: {exc}")
+
         return jsonify(
             {
                 "success": False,
@@ -138,13 +147,37 @@ def api_sync():
             }
         ), 500
 
-    print(f"received sync job: {job}")
+    summary = result["summary"]
+
+    if summary["errors"] > 0:
+        category = "error"
+
+        message = (
+            f"Synchronization completed with "
+            f"{summary['errors']} error"
+            f"{'s' if summary['errors'] != 1 else ''}."
+        )
+
+    elif summary["warnings"] > 0:
+        category = "warning"
+
+        message = (
+            f"Synchronization completed with "
+            f"{summary['warnings']} warning"
+            f"{'s' if summary['warnings'] != 1 else ''}."
+        )
+
+    else:
+        category = "success"
+
+        message = "Synchronization completed successfully."
 
     return jsonify(
         {
             "success": True,
-            "message": "Synchronization completed successfully.",
-            "category": "success",
-            "results": results,
+            "message": message,
+            "category": category,
+            "summary": summary,
+            "results": result["results"],
         }
     )

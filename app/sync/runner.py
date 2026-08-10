@@ -73,10 +73,13 @@ class SyncRunner:
                 job, Event.NOVEL_FINISH, current=current, total=total, result=result
             )
 
-        self._on_finish(results)
-        self._emit(job, Event.JOB_FINISH, results=results)
+        summary = self._on_finish(results)
+        self._emit(job, Event.JOB_FINISH, results=results, summary=summary)
 
-        return results
+        return {
+            "summary": summary,
+            "results": results,
+        }
 
     def preview(self, job):
         """
@@ -140,8 +143,10 @@ class SyncRunner:
 
     def _on_finish(self, results):
         """
-        Called after synchronization completes.
+        Build synchronization summary after all novels are processed.
         """
+
+        processed = len(results)
 
         updated = sum(1 for r in results if r and r.get("updated"))
 
@@ -151,17 +156,27 @@ class SyncRunner:
             1 for r in results if r and not r.get("updated") and not r.get("errors")
         )
 
-        warnings = sum(len(r.get("warnings", [])) for r in results if r)
+        warnings = sum(1 for r in results if r and r.get("warnings"))
+
+        summary = {
+            "total": processed,
+            "updated": updated,
+            "skipped": skipped,
+            "errors": errors,
+            "warnings": warnings,
+        }
 
         assert self.logger is not None
 
         self.logger.summary(
-            processed=len(results),
+            processed=processed,
             updated=updated,
             skipped=skipped,
             errors=errors,
             warnings=warnings,
         )
+
+        return summary
 
     # ------------------------------------------------------------------
     # Helpers

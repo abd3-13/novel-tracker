@@ -40,6 +40,7 @@ class SyncContext:
         """
         Emit an event for the current synchronization.
         """
+        
 
         if self.job.event_handler:
             self.job.event_handler(SyncEvent(type=event, data=data))

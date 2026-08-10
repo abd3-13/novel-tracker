@@ -181,25 +181,43 @@ function collectJob() {
 
 async function startSync() {
   setSyncButtonState('loading');
+
   const job = collectJob();
 
   try {
     const result = await runSync(job);
-    showNotification(result.message, result.category);
-    setSyncButtonState('success');
 
-    setTimeout(() => {
-      setSyncButtonState('idle');
-    }, 1500);
+    console.log('Sync result:', result);
 
-    console.log(result);
+    if (result.category === 'error') {
+      const errors = result.results.flatMap(result =>
+        (result.errors || []).map(error => ({ title: result.title, message: error }))
+      );
+      const errorMessage = errors.map(error => `${error.title}: ${error.message}`).join('\n');
+
+      console.error('Synchronization errors:', errorMessage);
+
+      showNotification(result.message, 'error');
+
+      setSyncButtonState('error');
+    } else if (result.category === 'warning') {
+      showNotification(result.message, 'warning');
+
+      setSyncButtonState('success');
+    } else {
+      showNotification(result.message, 'success');
+
+      setSyncButtonState('success');
+    }
   } catch (err) {
-    showNotification(err.message || 'Synchronization failed.', 'error');
-    console.error(err);
-    setSyncButtonState('error');
+    console.error('Synchronization failed:', err);
 
-    setTimeout(() => {
-      setSyncButtonState('idle');
-    }, 2000);
+    showNotification(err.message || 'Synchronization failed.', 'error');
+
+    setSyncButtonState('error');
   }
+
+  setTimeout(() => {
+    setSyncButtonState('idle');
+  }, 2000);
 }

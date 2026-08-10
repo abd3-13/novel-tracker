@@ -275,7 +275,7 @@ FIELDS = {
         synchronizer=generic_sync,
     ),
     SyncAction.FETCH_COVER: MetadataField(
-        column="fetchcover",
+        column=SyncAction.FETCH_COVER,
         group="Cover",
         name="Fetch Cover",
         description="Download a fresh cover image.",
@@ -315,7 +315,7 @@ FIELDS = {
         synchronizer=generic_sync,
     ),
     SyncAction.FETCH_CHARACTERS: MetadataField(
-        column="fetchchara",
+        column=SyncAction.FETCH_CHARACTERS,
         group="Characters",
         name="Fetch Characters",
         description="Download character images and metadata.",
