@@ -251,9 +251,9 @@ function processNovelResult(result) {
 
   updateSyncCounters();
 }
-
 function renderSyncProblems(results) {
   const container = document.getElementById('sync-result-problem-list');
+  const section = document.getElementById('sync-result-problems');
 
   container.innerHTML = '';
 
@@ -263,7 +263,7 @@ function renderSyncProblems(results) {
     for (const error of result.errors || []) {
       problems.push({
         type: 'error',
-        title: result.title,
+        title: result.title || 'Unknown novel',
         message: error
       });
     }
@@ -271,53 +271,47 @@ function renderSyncProblems(results) {
     for (const warning of result.warnings || []) {
       problems.push({
         type: 'warning',
-        title: result.title,
+        title: result.title || 'Unknown novel',
         message: warning
       });
     }
   });
 
   if (!problems.length) {
-    document.getElementById('sync-result-problems').classList.add('d-none');
-
+    section.classList.add('d-none');
     return;
   }
 
-  document.getElementById('sync-result-problems').classList.remove('d-none');
+  section.classList.remove('d-none');
 
   for (const problem of problems) {
-    const icon = problem.type === 'error' ? 'alert-circle' : 'alert-triangle';
-
-    const css = problem.type === 'error' ? 'text-danger' : 'text-warning';
+    const isError = problem.type === 'error';
+    const icon = isError ? 'alert-circle' : 'alert-triangle';
+    const css = isError ? 'text-danger' : 'text-warning';
 
     const item = document.createElement('div');
 
-    item.className = 'list-group-item';
+    item.className = 'list-group-item py-2 px-3';
 
     item.innerHTML = `
-            <div class="d-flex">
+      <div class="d-flex align-items-start gap-2">
+        <i class="ti ti-${icon} ${css} mt-1 flex-shrink-0"></i>
 
-                <i class="ti ti-${icon} ${css} me-2"></i>
+        <div class="min-width-0 flex-fill">
+          <div class="fw-semibold text-truncate" title="${problem.title}">
+            ${problem.title}
+          </div>
 
-                <div class="min-width-0">
-
-                    <div class="fw-bold text-truncate">
-                        ${problem.title || 'Unknown novel'}
-                    </div>
-
-                    <div class="text-muted small">
-                        ${problem.message}
-                    </div>
-
-                </div>
-
-            </div>
-        `;
+          <div class="text-muted small text-break">
+            ${problem.message}
+          </div>
+        </div>
+      </div>
+    `;
 
     container.appendChild(item);
   }
 }
-
 function handleSyncEvent(event, data) {
   switch (event) {
     case 'job_start':
@@ -396,7 +390,7 @@ function handleJobFinish(data) {
   updateSyncProgress(data.summary.total, data.summary.total);
 
   // Final result screen.
-  finishSync(data);
+  renderSyncResult(data);
 }
 
 function bindEvents() {
@@ -544,7 +538,7 @@ async function startSync() {
   }
 }
 
-function finishSync(data) {
+function renderSyncResult(data) {
   const summary = data.summary;
   const results = data.results || [];
 

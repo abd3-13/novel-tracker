@@ -55,7 +55,11 @@ class SyncEngine:
         self._commit(ctx)
         ctx.emit(Event.STAGE, stage=Stage.DONE)
 
-        return ctx.result or {"id": ctx.novel["id"], "updated": False, "changes": {}}
+        return ctx.result or {
+            "id": ctx.novel[MetadataKey.ID],
+            "updated": False,
+            "changes": {},
+        }
 
     # ------------------------------------------------------------------
     # Context
@@ -85,9 +89,9 @@ class SyncEngine:
         Register available metadata providers.
         """
 
-        ctx.providers.register("local", LocalProvider(ctx))
+        ctx.providers.register(Provider.LOCAL, LocalProvider(ctx))
 
-        ctx.providers.register("online", OnlineProvider(ctx))
+        ctx.providers.register(Provider.ONLINE, OnlineProvider(ctx))
 
     def _load_providers(self, ctx):
         """
@@ -96,10 +100,10 @@ class SyncEngine:
 
         match ctx.job.source:
             case Provider.LOCAL:
-                ctx.providers.load("local")
+                ctx.providers.load(Provider.LOCAL)
 
             case Provider.ONLINE:
-                ctx.providers.load("online")
+                ctx.providers.load(Provider.ONLINE)
 
             case _:
                 raise ValueError(f"Unknown sync source: {ctx.job.source}")
@@ -144,7 +148,9 @@ class SyncEngine:
             if ctx.job.dry_run:
                 ctx.logger.info("Dry run - skipping database update")
             else:
-                self.db.update_novel(ctx.novel["id"], updates, table=ctx.job.table)
+                self.db.update_novel(
+                    ctx.novel[MetadataKey.ID], updates, table=ctx.job.table
+                )
 
         else:
             ctx.logger.info("No updates to commit.")

@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.constants import MetadataKey
+
 from .events import SyncEvent
 from .job import SyncJob
 
@@ -41,7 +43,7 @@ class SyncContext:
         Emit an event for the current synchronization.
         """
 
-        data.setdefault("novel_id", self.novel["id"])
-        data.setdefault("novel", self.novel["name"])
+        data.setdefault("novel_id", self.novel[MetadataKey.ID])
+        data.setdefault("novel", self.novel[MetadataKey.TITLE])
         if self.job.event_handler:
             self.job.event_handler(SyncEvent(type=event, data=data))
