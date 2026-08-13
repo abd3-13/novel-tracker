@@ -79,7 +79,7 @@ def generic_sync(ctx, field: MetadataField):
     should_update = SyncStrategy.should_update(ctx.job.mode, current_value, new_value)
 
     ctx.logger.field(field.column, current_value, new_value, should_update)
-    ctx.emit(Event.FIELD, field=field.column)
+    ctx.emit(Event.FIELD, field=field.column, name=field.name)
 
     # ----------------------------
     # Sync
@@ -102,6 +102,7 @@ def sync_cover_asset(ctx, field: MetadataField):
     """
     Synchronize cover image.
     """
+    ctx.emit(Event.ASSET, asset=SyncAction.FETCH_COVER, name=field.name)
     provider = ctx.providers.get_provider(ctx.job.source)
     overwrite = ctx.job.mode == SyncMode.OVERWRITE
     cover_id = provider.fetch_cover(overwrite=overwrite)
@@ -113,6 +114,7 @@ def sync_character_assets(ctx, field: MetadataField):
     """
     Synchronize character assets.
     """
+    ctx.emit(Event.ASSET, asset=SyncAction.FETCH_CHARACTERS, name=field.name)
     provider = ctx.providers.get_provider(ctx.job.source)
     provider.fetch_characters()
 

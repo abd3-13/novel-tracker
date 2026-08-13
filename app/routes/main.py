@@ -1,11 +1,10 @@
 import logging
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, render_template, request
 from flask_login import current_user, login_required
 
 from app.sync.job import SyncJob
 from app.sync.metadata import FIELDS
-from app.sync.runner import SyncRunner
 from app.utils import db
 from app.utils.filters import log_SpamFilter
 
@@ -123,9 +122,18 @@ def api_sync():
             table=db.get_user_table(current_user),
         )
 
-        runner = SyncRunner()
+        sync_manager = current_app.extensions["sync_manager"]
 
-        result = runner.run(job)
+        execution = sync_manager.start(job)
+
+        return jsonify(
+            {
+                "success": True,
+                "message": "Synchronization started.",
+                "category": "success",
+                "job_id": execution.job_id,
+            }
+        ), 202
 
     except ValueError as exc:
         return jsonify(
@@ -137,47 +145,12 @@ def api_sync():
         ), 400
 
     except Exception as exc:  # noqa: BLE001
-        print(f"Synchronization failed: {exc}")
+        print(f"Failed to start synchronization: {exc}")
 
         return jsonify(
             {
                 "success": False,
-                "message": "Synchronization failed.",
+                "message": "Failed to start synchronization.",
                 "category": "error",
             }
         ), 500
-
-    summary = result["summary"]
-
-    if summary["errors"] > 0:
-        category = "error"
-
-        message = (
-            f"Synchronization completed with "
-            f"{summary['errors']} error"
-            f"{'s' if summary['errors'] != 1 else ''}."
-        )
-
-    elif summary["warnings"] > 0:
-        category = "warning"
-
-        message = (
-            f"Synchronization completed with "
-            f"{summary['warnings']} warning"
-            f"{'s' if summary['warnings'] != 1 else ''}."
-        )
-
-    else:
-        category = "success"
-
-        message = "Synchronization completed successfully."
-
-    return jsonify(
-        {
-            "success": True,
-            "message": message,
-            "category": category,
-            "summary": summary,
-            "results": result["results"],
-        }
-    )

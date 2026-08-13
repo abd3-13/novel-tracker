@@ -1,9 +1,28 @@
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from queue import Queue
 from typing import Any
+from uuid import uuid4
 
 from app.constants import Default, LogLevel, Provider, SyncMode
 from app.sync.metadata import FIELDS
+
+
+@dataclass
+class SyncExecution:
+    """
+    Runtime state for a synchronization job.
+    """
+
+    job_id: str = field(default_factory=lambda: str(uuid4()))
+
+    status: str = "pending"
+
+    result: dict[str, Any] | None = None
+
+    events: Queue = field(default_factory=Queue)
+
+    error: str | None = None
 
 
 @dataclass(slots=True)

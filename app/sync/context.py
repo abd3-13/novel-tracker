@@ -40,7 +40,8 @@ class SyncContext:
         """
         Emit an event for the current synchronization.
         """
-        
 
+        data.setdefault("novel_id", self.novel["id"])
+        data.setdefault("novel", self.novel["name"])
         if self.job.event_handler:
             self.job.event_handler(SyncEvent(type=event, data=data))
