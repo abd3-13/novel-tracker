@@ -1,4 +1,4 @@
-from app.constants import Event, Provider, Stage
+from app.constants import Event, MetadataKey, Provider, Stage
 
 from .collector import SyncCollector
 from .context import SyncContext
@@ -150,7 +150,8 @@ class SyncEngine:
             ctx.logger.info("No updates to commit.")
 
         ctx.result = {
-            "id": ctx.novel["id"],
+            "id": ctx.novel[MetadataKey.ID],
+            "title": ctx.novel[MetadataKey.TITLE],
             "updated": bool(updates),
             "changes": updates,
             "errors": list(ctx.logger.errors),
