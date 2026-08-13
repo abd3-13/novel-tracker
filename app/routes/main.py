@@ -1,6 +1,15 @@
+import json
 import logging
 
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import (
+    Blueprint,
+    Response,
+    current_app,
+    jsonify,
+    render_template,
+    request,
+    stream_with_context,
+)
 from flask_login import current_user, login_required
 
 from app.sync.job import SyncJob
@@ -154,3 +163,66 @@ def api_sync():
                 "category": "error",
             }
         ), 500
+
+
+@main_bp.route("/api/v1/sync/<job_id>", methods=["GET"])
+@login_required
+def api_sync_status(job_id):
+    sync_manager = current_app.extensions["sync_manager"]
+
+    execution = sync_manager.get(job_id)
+
+    if execution is None:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Synchronization job not found.",
+                "category": "warning",
+            }
+        ), 404
+
+    return jsonify(
+        {
+            "success": True,
+            "execution": execution.snapshot(),
+        }
+    )
+
+
+@main_bp.route("/api/v1/sync/<job_id>/events", methods=["GET"])
+@login_required
+def api_sync_events(job_id):
+    sync_manager = current_app.extensions["sync_manager"]
+
+    execution = sync_manager.get(job_id)
+
+    if execution is None:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Synchronization job not found.",
+                "category": "warning",
+            }
+        ), 404
+
+    @stream_with_context
+    def event_stream():
+        while True:
+            event = execution.events.get()
+
+            # No more events
+            if event is None:
+                yield (f"event: done\ndata: {json.dumps(execution.snapshot())}\n\n")
+                break
+
+            yield (f"event: {event.type}\ndata: {json.dumps(event.data)}\n\n")
+
+    return Response(
+        event_stream(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )

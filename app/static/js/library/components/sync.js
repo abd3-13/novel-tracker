@@ -1,5 +1,5 @@
 import { library } from '../state.js';
-import { getSyncRegistry, runSync } from './../api.js';
+import { getSyncRegistry, runSync, listenSyncProgress } from './../api.js';
 import { showNotification } from './../../notifi.js';
 // Global state
 const syncConfig = {
@@ -178,7 +178,6 @@ function collectJob() {
     novels: [...library.ids]
   };
 }
-
 async function startSync() {
   setSyncButtonState('loading');
 
@@ -187,35 +186,70 @@ async function startSync() {
   try {
     const result = await runSync(job);
 
-    console.log('Sync result:', result);
+    const jobId = result.job_id;
 
-    if (result.category === 'error') {
-      const errors = result.results.flatMap(result =>
-        (result.errors || []).map(error => ({ title: result.title, message: error }))
-      );
-      const errorMessage = errors.map(error => `${error.title}: ${error.message}`).join('\n');
+    console.log('Synchronization started:', jobId);
 
-      console.error('Synchronization errors:', errorMessage);
+    listenSyncProgress(jobId, {
+      job_start(data) {
+        console.log('JOB START:', data);
+      },
 
-      showNotification(result.message, 'error');
+      novel_start(data) {
+        console.log('NOVEL START:', data);
+      },
 
-      setSyncButtonState('error');
-    } else if (result.category === 'warning') {
-      showNotification(result.message, 'warning');
+      stage(data) {
+        console.log('STAGE:', data);
+      },
 
-      setSyncButtonState('success');
-    } else {
-      showNotification(result.message, 'success');
+      field(data) {
+        console.log('FIELD:', data);
+      },
 
-      setSyncButtonState('success');
-    }
+      novel_finish(data) {
+        console.log('NOVEL FINISH:', data);
+      },
+
+      job_finish(data) {
+        console.log('JOB FINISH:', data);
+
+        finishSync(data);
+      },
+
+      error(error) {
+        console.error('SYNC ERROR:', error);
+
+        showNotification('Synchronization event stream failed.', 'error');
+
+        setSyncButtonState('error');
+      }
+    });
   } catch (err) {
-    console.error('Synchronization failed:', err);
-
     showNotification(err.message || 'Synchronization failed.', 'error');
 
     setSyncButtonState('error');
   }
+}
+
+function finishSync(data) {
+  const summary = data.summary;
+
+  console.log('SYNC DONE:', summary);
+
+  if (summary.errors > 0) {
+    showNotification(`Synchronization completed with ${summary.errors} error(s).`, 'error');
+    setSyncButtonState('error');
+    return;
+  }
+
+  if (summary.warnings > 0) {
+    showNotification(`Synchronization completed with ${summary.warnings} warning(s).`, 'warning');
+  } else {
+    showNotification('Synchronization completed successfully.', 'success');
+  }
+
+  setSyncButtonState('success');
 
   setTimeout(() => {
     setSyncButtonState('idle');

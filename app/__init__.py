@@ -5,10 +5,8 @@ from flask_login import LoginManager
 
 from app.auth import auth_bp, load_user
 from app.routes.main import main_bp
-from app.state import BulkState
 from app.sync.manager import SyncManager
 from app.utils.filters import time_difference
-from app.worker import start_worker
 
 login_manager = LoginManager()
 
@@ -30,10 +28,6 @@ def create_app():
 
     app.extensions["sync_manager"] = SyncManager()
 
-    # App-level state
-    app.bulk_state = BulkState()
-
-    start_worker(app)
     return app
 
 

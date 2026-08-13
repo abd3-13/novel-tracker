@@ -45,3 +45,47 @@ export async function runSync(job) {
 
   return result;
 }
+
+export function listenSyncProgress(jobId, handlers = {}) {
+  const source = new EventSource(`/api/v1/sync/${jobId}/events`);
+
+  let completed = false;
+
+  const listen = (event, handler) => {
+    source.addEventListener(event, e => {
+      handler?.(JSON.parse(e.data));
+    });
+  };
+
+  listen('job_start', handlers.job_start);
+  listen('novel_start', handlers.novel_start);
+  listen('stage', handlers.stage);
+  listen('field', handlers.field);
+  listen('novel_finish', handlers.novel_finish);
+
+  source.addEventListener('job_finish', event => {
+    completed = true;
+
+    const data = JSON.parse(event.data);
+
+    handlers.job_finish?.(data);
+
+    // The stream has served its purpose.
+    source.close();
+  });
+
+  source.onerror = error => {
+    if (completed) {
+      // Expected because the stream has been closed.
+      return;
+    }
+
+    console.error('Sync event stream error:', error);
+
+    handlers.error?.(error);
+
+    source.close();
+  };
+
+  return source;
+}
