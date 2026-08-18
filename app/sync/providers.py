@@ -95,17 +95,6 @@ class LocalProvider(BaseProvider):
         self.meta = get_epub_metadata(self.filepath)
 
         # ---------------------------------------------------------
-        # MoonReader progress
-        # ---------------------------------------------------------
-        progress = None
-        try:
-            progress = get_moonreader_progress(self.filepath)
-        except Exception as e:  # noqa: BLE001
-            self.ctx.logger.error(
-                f"Error fetching MoonReader progress for {self.novel[MetadataKey.TITLE]}: {e}"
-            )
-
-        # ---------------------------------------------------------
         # Build provider data
         # ---------------------------------------------------------
 
@@ -120,7 +109,6 @@ class LocalProvider(BaseProvider):
             MetadataKey.LOCAL_LAST_FILE: self.meta.last_file,
             MetadataKey.CHARACTERS: self.meta.characters,
             MetadataKey.COVER: self.meta.cover_id,
-            MetadataKey.PROGRESS: progress.chapter if progress is not None else None,
             MetadataKey.FILEPATH: self.filepath,
             MetadataKey.EPUB_EXISTS: (
                 Path(db.get_value("LOCAL_EPUB_DIR") or "./") / self.filepath
@@ -145,6 +133,19 @@ class LocalProvider(BaseProvider):
             self.ctx.logger.warning("Cover extraction failed.")
 
         return cover
+
+    def get_progress(self):
+        # ---------------------------------------------------------
+        # MoonReader progress
+        # ---------------------------------------------------------
+        progress = None
+        try:
+            progress = get_moonreader_progress(self.filepath)
+        except Exception as e:  # noqa: BLE001
+            self.ctx.logger.error(
+                f"Error fetching MoonReader progress for {self.novel[MetadataKey.TITLE]}: {e}"
+            )
+        return progress
 
 
 # =============================================================================

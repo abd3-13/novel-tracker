@@ -49,3 +49,4 @@ coverage/
 data/
 epub_error.txt
 app/static/img/
+.pytest_cache/

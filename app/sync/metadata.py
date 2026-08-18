@@ -124,8 +124,28 @@ def sync_progress(ctx, field: MetadataField):
     """
     Synchronize MoonReader progress.
     """
-    generic_sync(ctx, field)
+    #generic_sync(ctx, field)
+    ctx.emit(Event.FIELD, field=field.column)
+    provider = ctx.providers.get_provider(ctx.job.source)
 
+    new_value = provider.get_progress()
+
+    current_value = ctx.novel.get(field.column)
+
+    should_update = SyncStrategy.should_update(ctx.job.mode, current_value, new_value)
+
+    ctx.logger.field(field.column, current_value, new_value, should_update)
+    ctx.emit(Event.FIELD, field=field.column, name=field.name)
+    # ----------------------------
+    # Sync
+    # ----------------------------
+
+    if not should_update:
+        return
+
+    ctx.collector.set(field.column, new_value)
+
+    ctx.logger.debug(f"Queued update: {field.column}")
 
 # =============================================================================
 # Metadata Registry
