@@ -8,7 +8,7 @@ export function renderHeader(library) {
         </div>
         <div class="col-auto">
           <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-icon btn-ghost-secondary fs-1" title="Settings"><i class="ti ti-settings"></i></button>
+            <button class="btn btn-icon btn-ghost-secondary fs-1" title="Settings" data-bs-toggle="offcanvas" data-bs-target="#library-settings-panel"><i class="ti ti-settings"></i></button>
             <div class="dropdown">
               <a href="#" class="fs-1 d-flex align-items-center text-reset text-decoration-none m-0 border-0" data-bs-toggle="dropdown"><i class="avatar avatar-lg ti ti-user"></i></a>
               <div class="dropdown-menu dropdown-menu-end">

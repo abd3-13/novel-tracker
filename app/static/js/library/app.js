@@ -8,10 +8,13 @@ import { renderToolbar, bindToolbar, updateSortButton } from './components/toolb
 import { applySort } from './components/sort.js';
 import { renderNovelCard } from './components/novel-card.js';
 import { initSyncPanel } from './components/sync.js';
+import { initSettingsPanel } from './components/settings.js';
 import { enableSelection } from './components/selection.js';
 import { showNotification } from './../notifi.js';
 
 async function init() {
+  window.showLibraryNotification = showNotification;
+
   if (window.flashMessages) {
     window.flashMessages.forEach(([category, message]) => {
       showNotification(message, category);
@@ -40,6 +43,7 @@ export function renderLibrary() {
   initFilterPanel(library);
 
   initSyncPanel(library);
+  initSettingsPanel();
 
   bindToolbar(
     search => {

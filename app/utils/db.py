@@ -11,6 +11,7 @@ Responsibilities
 Higher-level business logic belongs elsewhere.
 """
 
+import json
 import os
 import sqlite3
 
@@ -181,6 +182,9 @@ def init_db():
         SettingKey.EPUB_READER_FROM: "current",
         SettingKey.MOON_PROGRESS_FILE: "/data/data/com.flyersoft.moonreaderp/shared_prefs/positions10.xml",
         SettingKey.CHARAC_API: "https://idruid.webnovel.com/go/api/book-role",
+        SettingKey.CARD_OVERLAY_METADATA: json.dumps(
+            ["characters", "progress", "chapter", "updates", "time"]
+        ),
     }
     for key, value in default_settings.items():
         cur.execute(
@@ -237,6 +241,14 @@ def load_settings():
     return {row["key"]: row["value"] for row in rows}
 
 
+def list_setting_rows():
+    """Return all settings rows as dictionaries, ordered by key."""
+    conn = get_conn(row_factory=True)
+    rows = conn.execute("SELECT key, value FROM settings ORDER BY key").fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
 def get_settings_dict():
     """
     Return the cached settings dictionary.
@@ -263,6 +275,9 @@ def save_setting(key, value):
     The in-memory cache is updated immediately before writing
     to the database.
     """
+    if not isinstance(value, str):
+        value = json.dumps(value)
+
     if settings_dict.get(key) == value:
         return
     settings_dict[key] = value

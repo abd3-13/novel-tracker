@@ -187,6 +187,7 @@ class SettingKey(StrEnum):
     EPUB_READER_FROM = "EPUB_READER_FROM"
     MOON_PROGRESS_FILE = "MOON_PROGRESS_FILE"
     CHARAC_API = "CHARAC_API"
+    CARD_OVERLAY_METADATA = "CARD_OVERLAY_METADATA"
 
 
 # =============================================================================

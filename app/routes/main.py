@@ -105,6 +105,39 @@ def api_library():
     return jsonify({"data": library})
 
 
+@main_bp.route("/api/v1/settings")
+@login_required
+def api_settings():
+    return jsonify({"data": db.get_settings_dict()})
+
+
+@main_bp.route("/api/v1/settings", methods=["POST"])
+@login_required
+def api_save_setting():
+    payload = request.get_json(silent=True) or {}
+    key = payload.get("key")
+    value = payload.get("value")
+
+    if not key:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Setting key is required.",
+                "category": "warning",
+            }
+        ), 400
+
+    db.save_setting(key, value)
+    return jsonify(
+        {
+            "success": True,
+            "message": "Setting saved.",
+            "category": "success",
+            "data": {key: db.get_value(key)},
+        }
+    )
+
+
 @main_bp.route("/api/v1/sync/registry")
 @login_required
 def api_sync_registry():
