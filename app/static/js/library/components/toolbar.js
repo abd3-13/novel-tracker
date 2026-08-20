@@ -1,5 +1,5 @@
 import { SORT_OPTIONS } from './sort.js';
-import { updateSelectionBar, exitSelectionMode, clearSelection, selectAll } from './selection.js';
+import { updateSelectionBar, exitSelectionMode, clearSelection, selectAll, selectBetweenSelected } from './selection.js';
 import { library } from './../state.js';
 
 function renderSortMenu(sort) {
@@ -71,6 +71,10 @@ export function bindToolbar(onSearch, onSort) {
     clearSelection(container, library);
   });
 
+  document.getElementById('selection-between').addEventListener('click', () => {
+    selectBetweenSelected(container, library);
+  });
+
   document.getElementById('selection-select-all').addEventListener('click', () => {
     selectAll(container, library);
   });
@@ -98,6 +102,7 @@ export function renderToolbar(library) {
                 <div class="card-body py-2">
                     <div class="d-flex align-items-center gap-2">
                         <div class="flex-fill"><i class="ti ti-checkbox me-1"></i><strong id="selection-count">0 selected</strong></div>
+                        <button id="selection-between" class="btn btn-sm btn-outline-secondary"><i class="ti ti-arrows-horizontal me-1"></i>Between</button>
                         <button id="selection-select-all" class="btn btn-sm btn-outline-secondary"><i class="ti ti-select-all me-1"></i>Select all</button>
                         <button id="selection-clear" class="btn btn-sm btn-outline-secondary"><i class="ti ti-x me-1"></i>Clear</button>
                         <button id="selection-done" class="btn btn-sm btn-primary"><i class="ti ti-check me-1"></i>Done</button>

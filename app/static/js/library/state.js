@@ -9,6 +9,7 @@ export const library = {
 
   // Selected novels
   ids: new Set(),
+  selectionAnchor: null,
   selectionMode: false,
   onSelectionChange: null,
 
