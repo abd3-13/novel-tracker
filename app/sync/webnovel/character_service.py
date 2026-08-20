@@ -4,6 +4,12 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.constants import (
+    DefaultValue,
+    WebnovelErrorMessage,
+    WebnovelSummaryKey,
+    WebnovelSummaryStatus,
+)
 from app.utils.images import (
     convert_to_webp,
     download_image,
@@ -84,7 +90,7 @@ def fetch_characters(
       Character list > Character details > Retry failed details > Download images > Retry failed images > Write JSON/TXT > Return summary
     """
     if not book_id:
-        raise CharacterFetchError("Book ID is required to fetch characters.")
+        raise CharacterFetchError(WebnovelErrorMessage.BOOK_ID_REQUIRED)
 
     logger.info("Initializing character fetch...")
     output_dir = Path(output_dir)
@@ -125,7 +131,7 @@ def _load_character_list(state: CharacterFetchState) -> None:
 
     if not items:
         raise CharacterFetchError(
-            f"Unable to retrieve character list for {state.book_id}"
+            WebnovelErrorMessage.NO_CHARACTER_LIST.format(book_id=state.book_id)
         )
 
     for item in items:
@@ -215,7 +221,7 @@ def _retry_failed_images(state: CharacterFetchState) -> None:
         if not image_url:
             continue
         image_url = detail.image_url
-        name = detail.name or "Unknown"
+        name = detail.name or DefaultValue.UNKNOWN_TEXT
         filename = sanitize_filename(f"{name}.jpg")
         for _ in range(MAX_RETRY):
             image = download_image(
@@ -257,11 +263,17 @@ def _build_summary(state: CharacterFetchState) -> dict:
     """
     failed = sum(1 for task in state.tasks if task.detail_failed or task.image_failed)
     return {
-        "status": "success" if failed == 0 else "partial",
-        "book_id": state.book_id,
-        "characters": len(state.characters),
-        "downloaded": state.downloaded,
-        "failed": failed,
-        "output_dir": str(state.output_dir),
-        "msg": (f"Downloaded {state.downloaded} of {len(state.characters)} characters"),
+        WebnovelSummaryKey.STATUS: (
+            WebnovelSummaryStatus.SUCCESS
+            if failed == 0
+            else WebnovelSummaryStatus.PARTIAL
+        ),
+        WebnovelSummaryKey.BOOK_ID: state.book_id,
+        WebnovelSummaryKey.CHARACTERS: len(state.characters),
+        WebnovelSummaryKey.DOWNLOADED: state.downloaded,
+        WebnovelSummaryKey.FAILED: failed,
+        WebnovelSummaryKey.OUTPUT_DIR: str(state.output_dir),
+        WebnovelSummaryKey.MSG: (
+            f"Downloaded {state.downloaded} of {len(state.characters)} characters"
+        ),
     }

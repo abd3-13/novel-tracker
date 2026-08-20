@@ -1,6 +1,6 @@
 from typing import Any
 
-from app.constants import SyncMode
+from app.constants import SyncErrorMessage, SyncMode
 
 
 class SyncStrategy:
@@ -37,4 +37,4 @@ class SyncStrategy:
                 return current != new
 
             case _:
-                raise ValueError(f"Unknown sync mode: {mode}")
+                raise ValueError(SyncErrorMessage.UNKNOWN_MODE.format(mode=mode))

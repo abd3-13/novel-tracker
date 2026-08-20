@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 
 from curl_cffi import requests
 
+from app.constants import Asset, DefaultValue
 from app.utils.filters import time_difference
 
 bulk_progress = {
@@ -96,9 +97,9 @@ def timenow():
 
 def determine_status(latest_chap_time):
     if not latest_chap_time or latest_chap_time == "0":
-        return "Unknown"
+        return DefaultValue.UNKNOWN_TEXT
     time_diff = time_difference(latest_chap_time)
-    return "Ongoing" if time_diff <= 30 else "Hiatus"
+    return DefaultValue.ONGOING if time_diff <= 30 else DefaultValue.HIATUS
 
 
 def normalize_tags(tag_string: str) -> str:
@@ -195,7 +196,7 @@ def character_to_html_line(character: dict) -> str:
     Convert character dict to a single-line HTML-like string.
     Name in <b>, other fields separated by <br/>.
     """
-    name = character.get("name", "Unknown")
+    name = character.get("name", DefaultValue.UNKNOWN_TEXT)
 
     parts = [f"<b>{name}</b>"]
 
@@ -213,12 +214,14 @@ def character_to_html_line(character: dict) -> str:
 
 
 def write_characters_json(characters: list[dict], output_dir: Path):
-    with open(output_dir / "characters.json", "w", encoding="utf8") as f:
+    character_file = f"{Asset.CHARACTERS.value}.json"
+    with open(output_dir / character_file, "w", encoding="utf8") as f:
         json.dump(characters, f, indent=2, ensure_ascii=False)
 
 
 def write_characters_txt(characters: list[dict], output_dir: Path):
-    with open(output_dir / "characters.txt", "w", encoding="utf-8") as f:
+    character_file = f"{Asset.CHARACTERS.value}.txt"
+    with open(output_dir / character_file, "w", encoding="utf-8") as f:
         f.writelines(character_to_html_line(char) + "\n" for char in characters)
 
 

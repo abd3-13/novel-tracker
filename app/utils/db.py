@@ -14,14 +14,14 @@ Higher-level business logic belongs elsewhere.
 import os
 import sqlite3
 
-from app.constants import Default
+from app.constants import Default, MetadataKey, SettingKey
 from app.utils.tools import find_database_file, normalize_title
 
 # ============================================================================
 # Constants
 # ============================================================================
 DEFAULT_DB = find_database_file()
-DEFAULT_TABLE = "novels"
+DEFAULT_TABLE = Default.NOVEL_TABLE
 
 # ============================================================================
 # Connection Helpers
@@ -164,23 +164,23 @@ def init_db():
     # Default Settings
     # ------------------------------------------------------------------
     default_settings = {
-        "DB_PATH": "my-novels.db",
-        "ENDPOINT": "",
-        "IMG_ENDPOINT": "",
-        "USER_AGENT": "",
-        "REFER_URL": "",
-        "DELAY_FROM": "1",
-        "DELAY_TO": "3",
-        "LOCAL_EPUB_DIR": "novels/",
-        "COVER_PATH": "static/img/cover/",
-        "CHECK_ERROR_LINK": "1",
-        "API_TIMEOUT": "10",
-        "SECERT_KEY": "",
-        "LAST_BULK_TIME": "",
-        "UPDATE_LOCAL_ONLINE": "local",
-        "EPUB_READER_FROM": "current",
-        "MOON_PROGRESS_FILE": "/data/data/com.flyersoft.moonreaderp/shared_prefs/positions10.xml",
-        "CHARAC_API": "https://idruid.webnovel.com/go/api/book-role",
+        SettingKey.DB_PATH: "my-novels.db",
+        SettingKey.ENDPOINT: "",
+        SettingKey.IMG_ENDPOINT: "",
+        SettingKey.USER_AGENT: "",
+        SettingKey.REFER_URL: "",
+        SettingKey.DELAY_FROM: "1",
+        SettingKey.DELAY_TO: "3",
+        SettingKey.LOCAL_EPUB_DIR: "novels/",
+        SettingKey.COVER_PATH: "static/img/cover/",
+        SettingKey.CHECK_ERROR_LINK: "1",
+        SettingKey.API_TIMEOUT: "10",
+        SettingKey.SECRETS_KEY: "",
+        SettingKey.LAST_BULK_TIME: "",
+        SettingKey.UPDATE_LOCAL_ONLINE: "local",
+        SettingKey.EPUB_READER_FROM: "current",
+        SettingKey.MOON_PROGRESS_FILE: "/data/data/com.flyersoft.moonreaderp/shared_prefs/positions10.xml",
+        SettingKey.CHARAC_API: "https://idruid.webnovel.com/go/api/book-role",
     }
     for key, value in default_settings.items():
         cur.execute(
@@ -356,21 +356,21 @@ def build_base_novel():
     Build an empty novel dictionary used during import.
     """
     return {
-        "name": None,
-        "url": None,
-        "source": None,
-        "localchap": 0,
-        "onlinechap": 0,
-        "status": None,
+        MetadataKey.TITLE: None,
+        MetadataKey.URL: None,
+        MetadataKey.SOURCE: None,
+        MetadataKey.LOCAL_CHAPTERS: 0,
+        MetadataKey.ONLINE_CHAPTERS: 0,
+        MetadataKey.STATUS: None,
         "notes": "",
-        "filepath": None,
-        "latestchaptime": None,
-        "author": None,
-        "description": None,
-        "cover_path": None,
-        "local_lastchaptitle": None,
-        "local_lastchapfile": None,
-        "characters": 0,
+        MetadataKey.FILEPATH: None,
+        MetadataKey.LATEST_CHAPTER_TIME: None,
+        MetadataKey.AUTHOR: None,
+        MetadataKey.DESCRIPTION: None,
+        MetadataKey.COVER: None,
+        MetadataKey.LOCAL_LAST_TITLE: None,
+        MetadataKey.LOCAL_LAST_FILE: None,
+        MetadataKey.CHARACTERS: 0,
     }
 
 
@@ -405,7 +405,7 @@ def get_epub_files():
     """
     Return all EPUB filenames inside the configured EPUB directory.
     """
-    epub_dir = get_value("LOCAL_EPUB_DIR")
+    epub_dir = get_value(SettingKey.LOCAL_EPUB_DIR)
     return {file for file in os.listdir(epub_dir) if file.lower().endswith(".epub")}
 
 
@@ -413,7 +413,7 @@ def get_cover_files():
     """
     Return all WebP covers inside the configured cover directory.
     """
-    cover_dir = get_value("COVER_PATH")
+    cover_dir = get_value(SettingKey.COVER_PATH)
     return {file for file in os.listdir(cover_dir) if file.lower().endswith(".webp")}
 
 

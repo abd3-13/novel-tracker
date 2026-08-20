@@ -1,4 +1,4 @@
-from app.constants import Event, MetadataKey, Provider, Stage
+from app.constants import Event, MetadataKey, Provider, Stage, SyncResultKey
 
 from .collector import SyncCollector
 from .context import SyncContext
@@ -61,9 +61,9 @@ class SyncEngine:
         ctx.emit(Event.STAGE, stage=Stage.DONE)
 
         return ctx.result or {
-            "id": ctx.novel[MetadataKey.ID],
-            "updated": False,
-            "changes": {},
+            SyncResultKey.ID: ctx.novel[MetadataKey.ID],
+            SyncResultKey.UPDATED: False,
+            SyncResultKey.CHANGES: {},
         }
 
     # ------------------------------------------------------------------
@@ -161,12 +161,12 @@ class SyncEngine:
             ctx.logger.info("  - No updates to commit.")
 
         ctx.result = {
-            "id": ctx.novel[MetadataKey.ID],
-            "title": ctx.novel[MetadataKey.TITLE],
-            "updated": bool(updates),
-            "changes": updates,
-            "errors": list(ctx.logger.errors),
-            "warnings": list(ctx.logger.warnings),
+            SyncResultKey.ID: ctx.novel[MetadataKey.ID],
+            SyncResultKey.TITLE: ctx.novel[MetadataKey.TITLE],
+            SyncResultKey.UPDATED: bool(updates),
+            SyncResultKey.CHANGES: updates,
+            SyncResultKey.ERRORS: list(ctx.logger.errors),
+            SyncResultKey.WARNINGS: list(ctx.logger.warnings),
         }
 
     def _check_cancelled(self, is_cancelled):

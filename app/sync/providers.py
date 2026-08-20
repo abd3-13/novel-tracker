@@ -1,7 +1,14 @@
 from pathlib import Path
 from typing import Any
 
-from app.constants import Asset, Event, MetadataKey
+from app.constants import (
+    Asset,
+    DefaultValue,
+    Event,
+    MetadataKey,
+    SettingKey,
+    SourceDomain,
+)
 from app.sync.services import (
     extract_epub_cover,
     get_epub_metadata,
@@ -111,7 +118,10 @@ class LocalProvider(BaseProvider):
             MetadataKey.COVER: self.meta.cover_id,
             MetadataKey.FILEPATH: self.filepath,
             MetadataKey.EPUB_EXISTS: (
-                Path(db.get_value("LOCAL_EPUB_DIR") or "./") / self.filepath
+                Path(
+                    db.get_value(SettingKey.LOCAL_EPUB_DIR) or DefaultValue.CURRENT_DIR
+                )
+                / self.filepath
             ).exists(),
         }
 
@@ -168,7 +178,7 @@ class OnlineProvider(BaseProvider):
             f"Loading online metadata: {self.novel[MetadataKey.TITLE]}"
         )
 
-        if self.source != "webnovel":
+        if self.source != SourceDomain.WEBNOVEL:
             return
 
         if not self.url:
@@ -192,7 +202,7 @@ class OnlineProvider(BaseProvider):
             MetadataKey.AUTHOR: info.author,
             MetadataKey.DESCRIPTION: info.description,
             MetadataKey.URL: self.url,
-            MetadataKey.SOURCE: "webnovel",
+            MetadataKey.SOURCE: SourceDomain.WEBNOVEL,
             MetadataKey.ONLINE_CHAPTERS: info.chapter,
             MetadataKey.LATEST_CHAPTER_TIME: info.chapter_time,
             MetadataKey.ONLINE_CHARACTERS: _client.count_online_characters(book_id),
@@ -226,7 +236,10 @@ class OnlineProvider(BaseProvider):
 
         self.ctx.logger.info("Fetching characters...")
 
-        output_dir = Path(db.get_value("LOCAL_EPUB_DIR") or "./") / self.filepath
+        output_dir = (
+            Path(db.get_value(SettingKey.LOCAL_EPUB_DIR) or DefaultValue.CURRENT_DIR)
+            / self.filepath
+        )
         self.ctx.emit(Event.ASSET, asset=Asset.CHARACTERS)
         result = WN_fetch_characters(book_id=self.book_id, output_dir=output_dir)
 

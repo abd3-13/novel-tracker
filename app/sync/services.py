@@ -9,6 +9,16 @@ from pathlib import Path
 import tldextract
 from ebooklib import epub
 
+from app.constants import (
+    AssetExtension,
+    DefaultValue,
+    MetadataKey,
+    MetadataNamespace,
+    Provider,
+    SettingKey,
+    SourceDomain,
+    TocKeyword,
+)
 from app.utils import db
 from app.utils.images import convert_to_webp, get_image_format
 from app.utils.tools import normalize_filename
@@ -44,7 +54,7 @@ def extract_book_id(url: str | None = None) -> str | None:
 
 
 def _epub_dir() -> Path:
-    return Path(db.get_value("LOCAL_EPUB_DIR") or "./")
+    return Path(db.get_value(SettingKey.LOCAL_EPUB_DIR) or DefaultValue.CURRENT_DIR)
 
 
 def _resolve_epub_path(filename: str) -> Path:
@@ -87,7 +97,7 @@ def _count_chapters(toc) -> int:
             total += _count_chapters(children)
         else:
             title = item.title.lower()
-            if "chapter" in title and "volume" not in title:
+            if TocKeyword.CHAPTER in title and TocKeyword.VOLUME not in title:
                 total += 1
     return total
 
@@ -149,11 +159,11 @@ def _metadata_from_book(book) -> EpubMetadata:
     chap, last_title, last_file = extract_local_chap(book)
 
     meta = EpubMetadata(
-        url=first("DC", "source"),
-        author=first("DC", "creator"),
-        description=first("DC", "description"),
-        title=first("DC", "title"),
-        identifiers=first("DC", "identifier"),
+        url=first(MetadataNamespace.DC, "source"),
+        author=first(MetadataNamespace.DC, "creator"),
+        description=first(MetadataNamespace.DC, "description"),
+        title=first(MetadataNamespace.DC, "title"),
+        identifiers=first(MetadataNamespace.DC, "identifier"),
         chapters=chap,
         last_file=last_file,
         last_title=last_title,
@@ -168,13 +178,17 @@ def _metadata_from_book(book) -> EpubMetadata:
         # webnovel.com URLs embed a stable numeric book id -- use it directly
         # as the cover filename so re-imports of the same book overwrite
         # (rather than duplicate) the cached cover.
-        if source == "webnovel":
+        if source == SourceDomain.WEBNOVEL:
             book_id = extract_book_id(meta.url)
             if book_id:
                 cover_filename = f"{book_id}.webp"
         # Hosted blog platforms: the domain is just "blogspot"/"wordpress" for
         # every book, so use the subdomain (the actual site name) as source.
-        elif source in ("blogspot", "wordpress", "law"):
+        elif source in (
+            SourceDomain.BLOGSPOT,
+            SourceDomain.WORDPRESS,
+            SourceDomain.LAW,
+        ):
             source = ext.subdomain
 
         # No stable id available (unknown source, or webnovel URL didn't
@@ -213,9 +227,11 @@ def extract_epub_cover(
         meta = _metadata_from_book(book)
         cover_id = meta.cover_id
 
-    cover_id = cover_id or "nocover"
+    cover_id = cover_id or DefaultValue.NO_COVER
 
-    cover_dir = Path(db.get_value("COVER_PATH") or "./covers")
+    cover_dir = Path(
+        db.get_value(SettingKey.COVER_PATH) or DefaultValue.CURRENT_COVER_DIR
+    )
     cover_dir.mkdir(parents=True, exist_ok=True)
 
     # Final output is always WebP.
@@ -233,7 +249,7 @@ def extract_epub_cover(
         return ""
 
     # Write extracted bytes to a temporary file.
-    temp_path = cover_dir / f".{cover_id}.cover"
+    temp_path = cover_dir / f".{cover_id}.{AssetExtension.COVER}"
 
     try:
         temp_path.write_bytes(cover_data)
@@ -246,7 +262,7 @@ def extract_epub_cover(
         # ---------------------------------------------------------
         # Already WebP
         # ---------------------------------------------------------
-        if image_format == "WEBP":
+        if image_format == AssetExtension.WEBP:
             if cover_path.exists():
                 if not overwrite:
                     temp_path.unlink(missing_ok=True)
@@ -299,17 +315,17 @@ def import_epub_service(filename: str) -> dict:
     meta = get_epub_metadata(filename)
     novel.update(
         {
-            "filepath": filename,
-            "name": meta.title or "Unknown Title",
-            "url": meta.url,
-            "source": meta.source or "local",
-            "author": meta.author,
-            "description": meta.description,
-            "cover_path": meta.cover_id,
-            "localchap": meta.chapters,
-            "local_lastchaptitle": meta.last_title,
-            "local_lastchapfile": meta.last_file,
-            "characters": meta.characters,
+            MetadataKey.FILEPATH: filename,
+            MetadataKey.TITLE: meta.title or DefaultValue.UNKNOWN_TITLE,
+            MetadataKey.URL: meta.url,
+            MetadataKey.SOURCE: meta.source or Provider.LOCAL,
+            MetadataKey.AUTHOR: meta.author,
+            MetadataKey.DESCRIPTION: meta.description,
+            MetadataKey.COVER: meta.cover_id,
+            MetadataKey.LOCAL_CHAPTERS: meta.chapters,
+            MetadataKey.LOCAL_LAST_TITLE: meta.last_title,
+            MetadataKey.LOCAL_LAST_FILE: meta.last_file,
+            MetadataKey.CHARACTERS: meta.characters,
         }
     )
 
@@ -437,7 +453,7 @@ def get_moonreader_progress(
     """
 
     if xml_path is None:
-        xml_path = db.get_value("MOON_PROGRESS_FILE") or ""
+        xml_path = db.get_value(SettingKey.MOON_PROGRESS_FILE) or ""
 
     filename = normalize_filename(epub_filename)
 

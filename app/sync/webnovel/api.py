@@ -10,6 +10,14 @@ from typing import Any
 
 import requests
 
+from app.constants import (
+    DefaultValue,
+    MetadataKey,
+    SettingKey,
+    WebnovelErrorMessage,
+    WebnovelHeader,
+    WebnovelJsonKey,
+)
 from app.utils import db
 from app.utils.images import convert_to_webp, download_image
 from app.utils.tools import (
@@ -22,15 +30,21 @@ from app.utils.tools import (
 
 logger = logging.getLogger(__name__)
 
-MAX_TIMEOUT = int(db.get_value("API_TIMEOUT") or 10)
+MAX_TIMEOUT = int(db.get_value(SettingKey.API_TIMEOUT) or 10)
 
-API_BASE = db.get_value("CHARAC_API")
-IMG_ENDPOINT = db.get_value("IMG_ENDPOINT")
+API_BASE = db.get_value(SettingKey.CHARAC_API)
+IMG_ENDPOINT = db.get_value(SettingKey.IMG_ENDPOINT)
 
 CHARACTER_HEADERS = {
-    "User-Agent": db.get_value("USER_AGENT"),
-    "Referer": db.get_value("REFER_URL"),
-    "arcane": "001030brn5eb4rAuzLLDkrMV01qxQrbDmK0wsxXjcxcJwojV95Br0af+FCtWlRsQolF/2HmbHo7jOaKWHuSxjjFexOlUf9zF6LGQLGyGnTv5I9Boj+pzAmOC5wPQEZ2r6RYrHaqvmQ/rt+AqyqHRxWMa5zOv540mOGSz/U143WnI8j/ag=",
+    WebnovelHeader.USER_AGENT.value: db.get_value(SettingKey.USER_AGENT),
+    WebnovelHeader.REFERER.value: db.get_value(SettingKey.REFER_URL),
+    WebnovelHeader.ARCANE.value: "001030brn5eb4rAuzLLDkrMV01qxQrbDmK0wsxXjcxcJwojV95Br0af+FCtWlRsQolF/2HmbHo7jOaKWHuSxjjFexOlUf9zF6LGQLGyGnTv5I9Boj+pzAmOC5wPQEZ2r6RYrHaqvmQ/rt+AqyqHRxWMa5zOv540mOGSz/U143WnI8j/ag=",
+}
+
+CLIENT_HEADERS = {
+    WebnovelHeader.USER_AGENT.value: db.get_value(SettingKey.USER_AGENT),
+    WebnovelHeader.ACCEPT.value: "application/json",
+    WebnovelHeader.REFERER.value: db.get_value(SettingKey.REFER_URL),
 }
 
 BOOK_ID_PATTERNS = (
@@ -80,39 +94,40 @@ class WebnovelClient:
 
     def fetch_latest_chapter(self, book_id: str) -> NovelInfo:
         if not book_id:
-            raise ValueError("book_id cannot be empty")
+            raise ValueError(WebnovelErrorMessage.BOOK_ID_EMPTY)
 
-        endpoint = f"{db.get_value('ENDPOINT')}{book_id}"
-        headers = {
-            "User-Agent": db.get_value("USER_AGENT"),
-            "Accept": "application/json",
-            "Referer": "https://android.webnovel.com",
-        }
+        endpoint = f"{db.get_value(SettingKey.ENDPOINT)}{book_id}"
 
         time.sleep(
             random.uniform(
-                float(db.get_value("DELAY_FROM") or 2),
-                float(db.get_value("DELAY_TO") or 5),
+                float(db.get_value(SettingKey.DELAY_FROM) or 2),
+                float(db.get_value(SettingKey.DELAY_TO) or 5),
             )
         )
 
-        response = self.session.get(endpoint, headers=headers, timeout=MAX_TIMEOUT)
+        response = self.session.get(
+            endpoint, headers=CLIENT_HEADERS, timeout=MAX_TIMEOUT
+        )
         response.raise_for_status()
 
-        data = response.json().get("Data")
+        data = response.json().get(WebnovelJsonKey.DATA)
         if not data:
-            raise ValueError("Missing 'Data' in API response.")
+            raise ValueError(WebnovelErrorMessage.MISSING_RESPONSE_DATA)
 
-        novel_status = determine_status(epochtohuman(data["LastChapterTime"]))
+        novel_status = determine_status(
+            epochtohuman(data[WebnovelJsonKey.LAST_CHAPTER_TIME])
+        )
 
         return NovelInfo(
-            title=data.get("BookName"),
-            chapter=int(data.get("ChapterNum", 0)),
-            chapter_time=epochtohuman(data["LastChapterTime"])
-            if data.get("LastChapterTime")
+            title=data.get(WebnovelJsonKey.BOOK_NAME),
+            chapter=int(data.get(WebnovelJsonKey.CHAPTER_NUM, 0)),
+            chapter_time=epochtohuman(data[WebnovelJsonKey.LAST_CHAPTER_TIME])
+            if data.get(WebnovelJsonKey.LAST_CHAPTER_TIME)
             else None,
-            author=data.get("AuthorInfo", {}).get("AuthorName", "Unknown"),
-            description=data.get("Description", ""),
+            author=data.get(WebnovelJsonKey.AUTHOR_INFO, {}).get(
+                WebnovelJsonKey.AUTHOR_NAME, DefaultValue.UNKNOWN_TEXT
+            ),
+            description=data.get(WebnovelJsonKey.DESCRIPTION, ""),
             status=novel_status,
             cover=f"{book_id}.webp",
         )
@@ -121,31 +136,33 @@ class WebnovelClient:
         info = self.fetch_latest_chapter(book_id)
         novel.update(
             {
-                "onlinechap": info.chapter,
-                "latestchaptime": info.chapter_time,
-                "author": info.author,
-                "description": info.description,
-                "status": info.status,
-                "name": info.title,
-                "cover": info.cover,
+                MetadataKey.ONLINE_CHAPTERS: info.chapter,
+                MetadataKey.LATEST_CHAPTER_TIME: info.chapter_time,
+                MetadataKey.AUTHOR: info.author,
+                MetadataKey.DESCRIPTION: info.description,
+                MetadataKey.STATUS: info.status,
+                MetadataKey.TITLE: info.title,
+                MetadataKey.COVER: info.cover,
             }
         )
 
     def get_character_list(self, book_id: str) -> list[CharacterInfo]:
         data = http_get(
             f"{API_BASE}/list",
-            {"bookId": book_id},
+            {WebnovelJsonKey.BOOK_ID: book_id},
             headers=CHARACTER_HEADERS,
             timeout=MAX_TIMEOUT,
         )
-        if not data or data.get("Message") != "Success":
+        if not data or data.get(WebnovelJsonKey.MESSAGE) != WebnovelJsonKey.SUCCESS:
             return []
 
-        items = data.get("Data", {}).get("Items", [])
+        items = data.get(WebnovelJsonKey.DATA, {}).get(WebnovelJsonKey.ITEMS, [])
 
         return [
             CharacterInfo(
-                role_id=item["RoleId"], name=item.get("Name", "Unknown"), data=item
+                role_id=item[WebnovelJsonKey.ROLE_ID],
+                name=item.get(WebnovelJsonKey.NAME, DefaultValue.UNKNOWN_TEXT),
+                data=item,
             )
             for item in items
         ]
@@ -156,11 +173,11 @@ class WebnovelClient:
     def get_character_detail(self, book_id: str, role_id: str) -> CharacterInfo | None:
         data = http_get(
             f"{API_BASE}/detail",
-            {"bookId": book_id, "roleId": role_id},
+            {WebnovelJsonKey.BOOK_ID: book_id, WebnovelJsonKey.ROLE_ID_FIELD: role_id},
             headers=CHARACTER_HEADERS,
             timeout=MAX_TIMEOUT,
         )
-        if not data or data.get("Message") != "Success":
+        if not data or data.get(WebnovelJsonKey.MESSAGE) != WebnovelJsonKey.SUCCESS:
             return None
         return normalize_character(data)
 
@@ -177,15 +194,20 @@ class WebnovelClient:
 
         logger.debug("Downloading cover for %s", book_id)
 
-        url = f"{IMG_ENDPOINT}/cover?bookId={book_id}"
+        url = f"{IMG_ENDPOINT}/cover?{WebnovelJsonKey.BOOK_ID}={book_id}"
 
         cover = download_image(
             url=url,
             filename=f"{book_id}.cover",
-            folder=Path(db.get_value("COVER_PATH") or "./"),
+            folder=Path(
+                db.get_value(SettingKey.COVER_PATH) or DefaultValue.CURRENT_DIR
+            ),
             dry_run=False,
         )
-        cover_file = Path(db.get_value("COVER_PATH") or "./") / f"{book_id}.webp"
+        cover_file = (
+            Path(db.get_value(SettingKey.COVER_PATH) or DefaultValue.CURRENT_DIR)
+            / f"{book_id}.webp"
+        )
         if cover:
             logger.info("Downloaded cover: %s", cover)
             convert_to_webp(image_path=cover_file, overwrite=overwrite)
@@ -196,16 +218,16 @@ class WebnovelClient:
 
 
 def normalize_character(data: dict) -> CharacterInfo:
-    nickname = data.get("NickName")
+    nickname = data.get(WebnovelJsonKey.NICKNAME)
     if isinstance(nickname, list):
         nickname = ", ".join(nickname)
 
     return CharacterInfo(
-        role_id=data.get("RoleId", ""),
-        name=data.get("Name") or "Unknown",
+        role_id=data.get(WebnovelJsonKey.ROLE_ID, ""),
+        name=data.get(WebnovelJsonKey.NAME) or DefaultValue.UNKNOWN_TEXT,
         nickname=nickname,
-        birthday=data.get("Birthday"),
-        height=normalize_height(data.get("Height")),
-        description=normalize_text(data.get("Description", "")),
-        image_url=data.get("DesignImage"),
+        birthday=data.get(WebnovelJsonKey.BIRTHDAY),
+        height=normalize_height(data.get(WebnovelJsonKey.HEIGHT)),
+        description=normalize_text(data.get(WebnovelJsonKey.DESCRIPTION, "")),
+        image_url=data.get(WebnovelJsonKey.DESIGN_IMAGE),
     )

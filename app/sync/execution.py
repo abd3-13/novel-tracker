@@ -5,6 +5,8 @@ from threading import Event, Lock
 from typing import Any
 from uuid import uuid4
 
+from app.constants import ExecutionSnapshotKey, ExecutionStatus
+
 from .events import SyncEvent
 
 
@@ -19,7 +21,7 @@ class SyncExecution:
 
     job_id: str = field(default_factory=lambda: str(uuid4()))
 
-    status: str = "pending"
+    status: str = ExecutionStatus.PENDING
 
     start_time: float | None = None
     end_time: float | None = None
@@ -41,7 +43,7 @@ class SyncExecution:
         """Mark execution as running."""
 
         with self.lock:
-            self.status = "running"
+            self.status = ExecutionStatus.RUNNING
             self.start_time = time.time()
 
     def finish(self, result: dict[str, Any] | None = None):
@@ -49,7 +51,7 @@ class SyncExecution:
 
         with self.lock:
             self.result = result
-            self.status = "finished"
+            self.status = ExecutionStatus.FINISHED
             self.end_time = time.time()
 
     def fail(self, error: Exception | str):
@@ -57,7 +59,7 @@ class SyncExecution:
 
         with self.lock:
             self.error = str(error)
-            self.status = "failed"
+            self.status = ExecutionStatus.FAILED
             self.end_time = time.time()
 
     def cancel(self):
@@ -70,8 +72,8 @@ class SyncExecution:
         self.cancel_event.set()
 
         with self.lock:
-            if self.status == "running":
-                self.status = "cancelling"
+            if self.status == ExecutionStatus.RUNNING:
+                self.status = ExecutionStatus.CANCELLING
 
     def is_cancelled(self) -> bool:
         """Return whether cancellation was requested."""
@@ -83,7 +85,7 @@ class SyncExecution:
 
         with self.lock:
             self.result = result
-            self.status = "cancelled"
+            self.status = ExecutionStatus.CANCELLED
             self.end_time = time.time()
 
     # ------------------------------------------------------------------
@@ -112,7 +114,11 @@ class SyncExecution:
     def done(self) -> bool:
         """Whether execution has finished."""
 
-        return self.status in {"finished", "failed", "cancelled"}
+        return self.status in {
+            ExecutionStatus.FINISHED,
+            ExecutionStatus.FAILED,
+            ExecutionStatus.CANCELLED,
+        }
 
     @property
     def cancelling(self) -> bool:
@@ -130,14 +136,14 @@ class SyncExecution:
         """
 
         return {
-            "job_id": self.job_id,
-            "status": self.status,
-            "start_time": self.start_time,
-            "end_time": self.end_time,
-            "result": self.result,
-            "error": self.error,
-            "done": self.done,
-            "cancelling": self.cancelling,
+            ExecutionSnapshotKey.JOB_ID: self.job_id,
+            ExecutionSnapshotKey.STATUS: self.status,
+            ExecutionSnapshotKey.START_TIME: self.start_time,
+            ExecutionSnapshotKey.END_TIME: self.end_time,
+            ExecutionSnapshotKey.RESULT: self.result,
+            ExecutionSnapshotKey.ERROR: self.error,
+            ExecutionSnapshotKey.DONE: self.done,
+            ExecutionSnapshotKey.CANCELLING: self.cancelling,
         }
 
 

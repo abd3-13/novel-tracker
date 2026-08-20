@@ -12,7 +12,13 @@ Responsibilities
 This class contains no synchronization logic.
 """
 
-from app.constants import Event, MetadataKey
+from app.constants import (
+    Event,
+    MetadataKey,
+    SyncJobOptionKey,
+    SyncResultKey,
+    SyncSummaryKey,
+)
 from app.utils import db
 
 from .engine import SyncEngine
@@ -78,8 +84,8 @@ class SyncRunner:
             if is_cancelled and is_cancelled():
                 break
         cancelled = bool(is_cancelled and is_cancelled())
-        summary: dict[str, int | bool] = self._on_finish(results)
-        summary["cancelled"] = cancelled
+        summary = self._on_finish(results)
+        summary[SyncSummaryKey.CANCELLED] = cancelled
         self._emit(job, Event.JOB_FINISH, results=results, summary=summary)
 
         return {
@@ -110,18 +116,22 @@ class SyncRunner:
             return selector.ids(job.novels)
 
         # Filter by source
-        if "source" in job.options:
-            return selector.column(MetadataKey.SOURCE, job.options["source"])
+        if SyncJobOptionKey.SOURCE in job.options:
+            return selector.column(
+                MetadataKey.SOURCE, job.options[SyncJobOptionKey.SOURCE]
+            )
 
         # Filter by status
-        if "status" in job.options:
-            return selector.column(MetadataKey.STATUS, job.options["status"])
+        if SyncJobOptionKey.STATUS in job.options:
+            return selector.column(
+                MetadataKey.STATUS, job.options[SyncJobOptionKey.STATUS]
+            )
 
         # Custom WHERE clause
-        if "where" in job.options:
+        if SyncJobOptionKey.WHERE in job.options:
             return selector.where(
-                job.options["where"],
-                job.options.get("params", ()),
+                job.options[SyncJobOptionKey.WHERE],
+                job.options.get(SyncJobOptionKey.PARAMS, ()),
             )
 
         # Default
@@ -165,11 +175,11 @@ class SyncRunner:
         warnings = sum(1 for r in results if r and r.get("warnings"))
 
         summary = {
-            "total": processed,
-            "updated": updated,
-            "skipped": skipped,
-            "errors": errors,
-            "warnings": warnings,
+            SyncSummaryKey.TOTAL: processed,
+            SyncSummaryKey.UPDATED: updated,
+            SyncSummaryKey.SKIPPED: skipped,
+            SyncSummaryKey.ERRORS: errors,
+            SyncSummaryKey.WARNINGS: warnings,
         }
 
         assert self.logger is not None
@@ -194,12 +204,12 @@ class SyncRunner:
         """
 
         return {
-            "id": novel[MetadataKey.ID],
-            "title": novel[MetadataKey.TITLE],
-            "updated": False,
-            "changes": {},
-            "errors": [str(error)],
-            "warnings": [],
+            SyncResultKey.ID: novel[MetadataKey.ID],
+            SyncResultKey.TITLE: novel[MetadataKey.TITLE],
+            SyncResultKey.UPDATED: False,
+            SyncResultKey.CHANGES: {},
+            SyncResultKey.ERRORS: [str(error)],
+            SyncResultKey.WARNINGS: [],
         }
 
     def _emit(self, job, event_type: str, **data):

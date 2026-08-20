@@ -2,7 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.constants import Default, LogLevel, Provider, SyncMode
+from app.constants import Default, LogLevel, Provider, SyncJobKey, SyncMode
 from app.sync.metadata import FIELDS
 
 
@@ -51,11 +51,11 @@ class SyncJob:
         if not isinstance(data, dict):
             raise TypeError("Sync job must be an object.")
 
-        source = data.get("source", Provider.LOCAL)
-        mode = data.get("mode", SyncMode.FILL_MISSING)
-        fields = data.get("fields", [])
-        dry_run = data.get("dry_run", False)
-        force = data.get("force", False)
+        source = data.get(SyncJobKey.SOURCE, Provider.LOCAL)
+        mode = data.get(SyncJobKey.MODE, SyncMode.FILL_MISSING)
+        fields = data.get(SyncJobKey.FIELDS, [])
+        dry_run = data.get(SyncJobKey.DRY_RUN, False)
+        force = data.get(SyncJobKey.FORCE, False)
 
         try:
             source = Provider(source)
@@ -78,7 +78,7 @@ class SyncJob:
         if not all(isinstance(value, str) for value in fields):
             raise ValueError("Sync fields must contain strings.")
 
-        novels = data.get("novels", [])
+        novels = data.get(SyncJobKey.NOVELS, [])
 
         if not isinstance(novels, list):
             raise TypeError("Novels must be a list.")
