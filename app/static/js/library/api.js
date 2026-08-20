@@ -46,6 +46,18 @@ export async function runSync(job) {
   return result;
 }
 
+export async function cancelSync(jobId) {
+  const response = await fetch(`/api/v1/sync/${jobId}/cancel`, {
+    method: 'POST'
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) throw new Error(result.message || result.error || 'Failed to cancel synchronization.');
+
+  return result;
+}
+
 export function listenSyncProgress(jobId, handlers = {}) {
   const source = new EventSource(`/api/v1/sync/${jobId}/events`);
 

@@ -50,17 +50,17 @@ class SyncLogger:
     # ------------------------------------------------------------------
 
     def job(self, title):
-        self.info(f"\n===== {title} =====")
+        self.debug(f"===== {title} =====")
 
     def provider(self, name):
-        self.debug(f"\nLoading provider: {name}")
+        self.debug(f"Loading provider: {name}")
 
     def progress(self, current, total, title):
-        self.info(f"\n[{current}/{total}] {title}")
+        self.info(f"[{current}/{total}] {title}")
 
     def collector(self, updates):
 
-        self.debug("\n===== SyncCollector =====")
+        self.debug("===== SyncCollector =====")
 
         if not updates:
             self.debug("No updates.")

@@ -1,5 +1,5 @@
 import { library } from '../state.js';
-import { getSyncRegistry, runSync, listenSyncProgress } from './../api.js';
+import { getSyncRegistry, runSync, cancelSync, listenSyncProgress } from './../api.js';
 import { showNotification } from './../../notifi.js';
 // Global state
 const syncConfig = {
@@ -23,6 +23,10 @@ const syncLog = {
   entries: []
 };
 
+let syncJobId = null;
+let syncEventSource = null;
+let syncCancellationRequested = false;
+
 function updateSyncConfig() {
   syncConfig.source = document.querySelector('input[name="sync-source"]:checked').value;
 
@@ -41,6 +45,11 @@ export function initSyncPanel(library) {
 }
 
 function resetSyncPanel() {
+  syncEventSource?.close();
+  syncEventSource = null;
+  syncJobId = null;
+  syncCancellationRequested = false;
+
   // Reset runtime state
   resetSyncProgress();
 
@@ -73,6 +82,7 @@ function resetSyncPanel() {
 
   // Reset button
   setSyncButtonState('idle');
+  setSyncCancelButtonState('idle');
 
   // Return to configuration view
   showSyncView('config');
@@ -509,6 +519,7 @@ function bindEvents() {
   document.getElementById('sync-metadata').addEventListener('change', updateMetadataToggle);
 
   document.getElementById('sync-start').addEventListener('click', startSync);
+  document.getElementById('sync-cancel').addEventListener('click', cancelCurrentSync);
   document.getElementById('sync-done').addEventListener('click', resetSyncPanel);
   document.getElementById('sync-log-clear').addEventListener('click', () => {
     const list = document.getElementById('sync-log-list');
@@ -577,6 +588,32 @@ function setSyncButtonState(state) {
   button.innerHTML = config.html;
 }
 
+function setSyncCancelButtonState(state) {
+  const button = document.getElementById('sync-cancel');
+
+  const states = {
+    idle: {
+      disabled: false,
+      html: '<i class="ti ti-player-stop me-1"></i> Cancel Synchronization'
+    },
+
+    cancelling: {
+      disabled: true,
+      html: '<span class="spinner-border spinner-border-sm me-1"></span> Cancelling...'
+    },
+
+    done: {
+      disabled: true,
+      html: '<i class="ti ti-check me-1"></i> Cancelled'
+    }
+  };
+
+  const config = states[state];
+
+  button.disabled = config.disabled;
+  button.innerHTML = config.html;
+}
+
 function collectJob() {
   return {
     source: syncConfig.source,
@@ -595,6 +632,10 @@ function collectJob() {
 
 async function startSync() {
   setSyncButtonState('loading');
+  setSyncCancelButtonState('idle');
+
+  syncJobId = null;
+  syncCancellationRequested = false;
 
   resetSyncProgress();
   resetSyncLog();
@@ -606,11 +647,11 @@ async function startSync() {
   try {
     const result = await runSync(job);
 
-    const jobId = result.job_id;
+    syncJobId = result.job_id;
 
-    //console.log('Synchronization started:', jobId);
+    //console.log('Synchronization started:', syncJobId);
 
-    listenSyncProgress(jobId, {
+    syncEventSource = listenSyncProgress(syncJobId, {
       job_start(data) {
         handleSyncEvent('job_start', data);
       },
@@ -633,6 +674,8 @@ async function startSync() {
 
       job_finish(data) {
         handleSyncEvent('job_finish', data);
+        syncEventSource = null;
+        syncJobId = null;
       },
 
       error(error) {
@@ -649,6 +692,30 @@ async function startSync() {
     showNotification(err.message || 'Synchronization failed.', 'error');
 
     setSyncButtonState('error');
+    setSyncCancelButtonState('done');
+  }
+}
+
+async function cancelCurrentSync() {
+  if (!syncJobId || syncCancellationRequested) return;
+
+  syncCancellationRequested = true;
+  setSyncCancelButtonState('cancelling');
+
+  const status = document.getElementById('sync-current-status');
+  if (status) status.textContent = 'Cancellation requested...';
+
+  addSyncLog('Cancellation requested. Finishing the current operation...', 'warning');
+
+  try {
+    await cancelSync(syncJobId);
+    showNotification('Synchronization cancellation requested.', 'warning');
+  } catch (err) {
+    console.error(err);
+
+    syncCancellationRequested = false;
+    setSyncCancelButtonState('idle');
+    showNotification(err.message || 'Failed to cancel synchronization.', 'error');
   }
 }
 
@@ -673,26 +740,39 @@ function renderSyncResult(data) {
   const message = document.getElementById('sync-result-message');
   const icon = document.getElementById('sync-result-icon');
 
-  if (summary.errors > 0) {
+  if (summary.cancelled) {
+    title.textContent = 'Synchronization Cancelled';
+    message.textContent = `${summary.total} novel(s) were processed before cancellation.`;
+
+    icon.className = 'ti ti-player-stop fs-1';
+    icon.parentElement.className = 'avatar avatar-xl bg-warning-lt mb-3';
+  } else if (summary.errors > 0) {
     title.textContent = 'Synchronization Completed with Errors';
     message.textContent = `${summary.errors} novel(s) encountered errors.`;
 
     icon.className = 'ti ti-alert-circle fs-1';
+    icon.parentElement.className = 'avatar avatar-xl bg-danger-lt mb-3';
   } else if (summary.warnings > 0) {
     title.textContent = 'Synchronization Completed with Warnings';
     message.textContent = `${summary.warnings} warning(s) were reported.`;
 
     icon.className = 'ti ti-alert-triangle fs-1';
+    icon.parentElement.className = 'avatar avatar-xl bg-warning-lt mb-3';
   } else {
     title.textContent = 'Synchronization Complete';
     message.textContent = 'All selected novels were synchronized successfully.';
 
     icon.className = 'ti ti-check fs-1';
+    icon.parentElement.className = 'avatar avatar-xl bg-success-lt mb-3';
   }
 
   showSyncView('result');
+  setSyncCancelButtonState(summary.cancelled ? 'done' : 'done');
 
-  if (summary.errors > 0) {
+  if (summary.cancelled) {
+    setSyncButtonState('error');
+    showNotification('Synchronization cancelled.', 'warning');
+  } else if (summary.errors > 0) {
     setSyncButtonState('error');
 
     showNotification(`Synchronization completed with ${summary.errors} error(s).`, 'error');

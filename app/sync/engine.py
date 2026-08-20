@@ -158,7 +158,7 @@ class SyncEngine:
                 )
 
         else:
-            ctx.logger.info("No updates to commit.")
+            ctx.logger.info("  - No updates to commit.")
 
         ctx.result = {
             "id": ctx.novel[MetadataKey.ID],
