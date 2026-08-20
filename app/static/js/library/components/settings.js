@@ -54,33 +54,49 @@ export function renderSettingsPanel() {
   ).join('');
 
   document.getElementById('library-settings-content').innerHTML = `
-    <div class="d-flex flex-column gap-3">
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title mb-0">Database settings</h3>
-        </div>
-        <div class="card-body">
-          <div class="mb-3">
-            ${databaseRows || '<div class="text-muted">No settings available.</div>'}
-          </div>
-          <button type="button" class="btn btn-primary" id="save-database-settings">
-            <i class="ti ti-device-floppy me-1"></i>
-            Save database settings
+    <div class="accordion" id="library-settings-accordion">
+      <div class="accordion-item border-1">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#library-settings-db" aria-expanded="false" aria-controls="library-settings-db">
+            <span class="d-flex align-items-center gap-2">
+              <i class="ti ti-database text-muted"></i>
+              <span>Database settings</span>
+            </span>
+            <span class="ms-auto text-muted small"><i class="ti ti-selector"></i></span>
           </button>
+        </h2>
+        <div id="library-settings-db" class="accordion-collapse collapse" data-bs-parent="#library-settings-accordion">
+          <div class="accordion-body">
+            <div class="mb-3">
+              ${databaseRows || '<div class="text-muted">No settings available.</div>'}
+            </div>
+            <button type="button" class="btn btn-primary" id="save-database-settings">
+              <i class="ti ti-device-floppy me-1"></i>
+              Save database settings
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title mb-0">Card overlay metadata</h3>
-        </div>
-        <div class="card-body">
-          <div class="text-secondary small mb-3">Choose which metadata appears on each novel card overlay.</div>
-          ${overlayRows}
-          <button type="button" class="btn btn-primary mt-3" id="save-overlay-settings">
-            <i class="ti ti-device-floppy me-1"></i>
-            Save overlay settings
+      <div class="accordion-item border-1">
+        <h2 class="accordion-header">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#library-settings-overlay" aria-expanded="true" aria-controls="library-settings-overlay">
+            <span class="d-flex align-items-center gap-2">
+              <i class="ti ti-layout-grid text-muted"></i>
+              <span>Card overlay metadata</span>
+            </span>
+            <span class="ms-auto text-muted small"><i class="ti ti-selector"></i></span>
           </button>
+        </h2>
+        <div id="library-settings-overlay" class="accordion-collapse collapse show" data-bs-parent="#library-settings-accordion">
+          <div class="accordion-body">
+            <div class="text-secondary small mb-3">Choose which metadata appears on each novel card overlay.</div>
+            ${overlayRows}
+            <button type="button" class="btn btn-primary mt-3" id="save-overlay-settings">
+              <i class="ti ti-device-floppy me-1"></i>
+              Save overlay settings
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -95,15 +111,35 @@ export function renderSettingsPanel() {
       inputs.forEach(input => {
         const key = input.dataset.settingKey;
         const value = input.value;
-        if (key) updates.push({ key, value });
+        const original = window.librarySettings?.[key];
+
+        if (key && String(original ?? '') !== String(value)) {
+          updates.push({ key, value });
+        }
       });
 
-      for (const item of updates) {
-        await saveSetting(item.key, item.value);
+      if (!updates.length) {
+        if (window.showLibraryNotification) {
+          window.showLibraryNotification('No setting changes to save.', 'info');
+        }
+        return;
       }
 
-      if (window.showLibraryNotification) {
-        window.showLibraryNotification('Database settings saved.', 'success');
+      try {
+        const results = [];
+        for (const item of updates) {
+          const result = await saveSetting(item.key, item.value);
+          results.push(result);
+        }
+
+        const lastResult = results.at(-1) || { success: true, message: 'Settings saved.' };
+        if (window.showLibraryNotification) {
+          window.showLibraryNotification(lastResult.message || 'Settings saved.', lastResult.category || 'success');
+        }
+      } catch (error) {
+        if (window.showLibraryNotification) {
+          window.showLibraryNotification(error.message || 'Failed to save settings.', 'error');
+        }
       }
     });
   }
@@ -114,10 +150,25 @@ export function renderSettingsPanel() {
       const selected = Array.from(document.querySelectorAll('.settings-overlay-toggle:checked')).map(
         el => el.dataset.settingValue
       );
-      await saveSetting('CARD_OVERLAY_METADATA', selected);
-      window.librarySettings = { ...window.librarySettings, CARD_OVERLAY_METADATA: JSON.stringify(selected) };
-      if (window.showLibraryNotification) {
-        window.showLibraryNotification('Card overlay metadata saved.', 'success');
+      const current = getSelectedOverlayMetadata();
+
+      if (JSON.stringify(selected) === JSON.stringify(current)) {
+        if (window.showLibraryNotification) {
+          window.showLibraryNotification('No overlay changes to save.', 'info');
+        }
+        return;
+      }
+
+      try {
+        const result = await saveSetting('CARD_OVERLAY_METADATA', selected);
+        window.librarySettings = { ...window.librarySettings, CARD_OVERLAY_METADATA: JSON.stringify(selected) };
+        if (window.showLibraryNotification) {
+          window.showLibraryNotification(result.message || 'Overlay settings saved.', result.category || 'success');
+        }
+      } catch (error) {
+        if (window.showLibraryNotification) {
+          window.showLibraryNotification(error.message || 'Failed to save overlay settings.', 'error');
+        }
       }
     });
   }
