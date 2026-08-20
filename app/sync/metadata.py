@@ -79,7 +79,13 @@ def generic_sync(ctx, field: MetadataField):
     should_update = SyncStrategy.should_update(ctx.job.mode, current_value, new_value)
 
     ctx.logger.field(field.column, current_value, new_value, should_update)
-    ctx.emit(Event.FIELD, field=field.column, name=field.name)
+    ctx.emit(
+        Event.FIELD,
+        field=field.column,
+        name=field.name,
+        value=new_value,
+        should_update=should_update,
+    )
 
     # ----------------------------
     # Sync
@@ -109,6 +115,8 @@ def sync_cover_asset(ctx, field: MetadataField):
     if cover_id:
         ctx.collector.set(field.column, cover_id)
 
+    ctx.emit(Event.FIELD, field=field.column, name=field.name, value=cover_id)
+
 
 def sync_character_assets(ctx, field: MetadataField):
     """
@@ -124,7 +132,7 @@ def sync_progress(ctx, field: MetadataField):
     """
     Synchronize MoonReader progress.
     """
-    #generic_sync(ctx, field)
+    # generic_sync(ctx, field)
     ctx.emit(Event.FIELD, field=field.column)
     provider = ctx.providers.get_provider(ctx.job.source)
 
@@ -135,7 +143,7 @@ def sync_progress(ctx, field: MetadataField):
     should_update = SyncStrategy.should_update(ctx.job.mode, current_value, new_value)
 
     ctx.logger.field(field.column, current_value, new_value, should_update)
-    ctx.emit(Event.FIELD, field=field.column, name=field.name)
+    ctx.emit(Event.FIELD, field=field.column, name=field.name, value=new_value)
     # ----------------------------
     # Sync
     # ----------------------------
@@ -146,6 +154,7 @@ def sync_progress(ctx, field: MetadataField):
     ctx.collector.set(field.column, new_value)
 
     ctx.logger.debug(f"Queued update: {field.column}")
+
 
 # =============================================================================
 # Metadata Registry

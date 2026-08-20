@@ -156,3 +156,27 @@
   z-index: 10;
   background: var(--tblr-bg-surface, #fff);
 }
+
+#sync-offcanvas .offcanvas-body {
+  min-height: 0;
+}
+
+#sync-progress-view.sync-active-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+#sync-live-log {
+  min-height: 120px;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+#sync-log-container {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+}

@@ -18,6 +18,11 @@ const syncProgress = {
   errors: 0
 };
 
+const syncLog = {
+  maxEntries: 500,
+  entries: []
+};
+
 function updateSyncConfig() {
   syncConfig.source = document.querySelector('input[name="sync-source"]:checked').value;
 
@@ -38,6 +43,9 @@ export function initSyncPanel(library) {
 function resetSyncPanel() {
   // Reset runtime state
   resetSyncProgress();
+
+  // Reset Logs viewer
+  resetSyncLog();
 
   // Reset progress UI
   updateSyncProgress(0, 0);
@@ -163,36 +171,24 @@ function showSyncView(view) {
 }
 
 function updateSyncStage(stage) {
-  const stages = ['providers', 'metadata', 'commit', 'done'];
-  const currentIndex = stages.indexOf(stage);
+  const status = document.getElementById('sync-current-status');
 
-  document.querySelectorAll('#sync-stages [data-stage]').forEach(element => {
-    const name = element.dataset.stage;
-    const index = stages.indexOf(name);
-    const icon = element.querySelector('i');
+  if (!status || !stage) return;
 
-    element.classList.remove('text-primary', 'text-success', 'text-muted');
+  const labels = {
+    providers: 'Fetching data...',
+    metadata: 'Synchronizing metadata...',
+    commit: 'Saving changes...',
+    done: 'Finishing...'
+  };
 
-    if (stage === null) {
-      icon.className = 'ti ti-circle me-2';
-      element.classList.add('text-muted');
-    } else if (index < currentIndex) {
-      icon.className = 'ti ti-check me-2';
-      element.classList.add('text-success');
-    } else if (index === currentIndex) {
-      icon.className = 'ti ti-loader-2 me-2';
-      element.classList.add('text-primary');
-    } else {
-      icon.className = 'ti ti-circle me-2';
-      element.classList.add('text-muted');
-    }
-  });
+  status.textContent = labels[stage] || stage;
 }
 
 function updateCurrentNovel(novel) {
   document.getElementById('sync-current-novel').textContent = novel;
 
-  document.getElementById('sync-current-status').textContent = 'Synchronizing...';
+  document.getElementById('sync-current-status').textContent = 'Synchronizing... ';
 }
 
 function finishCurrentNovel(result) {
@@ -251,6 +247,81 @@ function processNovelResult(result) {
 
   updateSyncCounters();
 }
+
+function resetSyncLog() {
+  syncLog.entries = [];
+
+  const list = document.getElementById('sync-log-list');
+
+  if (list) {
+    list.innerHTML = '';
+  }
+
+  document.getElementById('sync-live-log')?.classList.add('d-none');
+}
+
+function addSyncLog(message, type = 'info') {
+  const container = document.getElementById('sync-live-log');
+  const list = document.getElementById('sync-log-list');
+
+  if (!container || !list) return;
+
+  container.classList.remove('d-none');
+
+  syncLog.entries.push({
+    time: new Date(),
+    message,
+    type
+  });
+
+  if (syncLog.entries.length > syncLog.maxEntries) {
+    syncLog.entries.shift();
+  }
+
+  const row = document.createElement('div');
+  row.className = 'sync-log-entry font-monospace small';
+
+  const time = document.createElement('span');
+  time.className = 'text-secondary';
+  time.textContent = new Date().toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
+  const text = document.createElement('span');
+
+  text.className = `ms-2 ${
+    {
+      info: 'text-muted',
+      success: 'text-success',
+      warning: 'text-warning',
+      error: 'text-danger'
+    }[type] || 'text-muted'
+  }`;
+
+  text.textContent = message;
+
+  row.append(time, text);
+  list.appendChild(row);
+
+  const scrollContainer = document.getElementById('sync-log-container');
+
+  if (scrollContainer) {
+    scrollContainer.scrollTop = scrollContainer.scrollHeight;
+  }
+}
+
+function logNovelProblems(result) {
+  for (const warning of result.warnings || []) {
+    addSyncLog(`  ⚠ ${warning}`, 'warning');
+  }
+
+  for (const error of result.errors || []) {
+    addSyncLog(`  ✖ ${error}`, 'error');
+  }
+}
+
 function renderSyncProblems(results) {
   const container = document.getElementById('sync-result-problem-list');
   const section = document.getElementById('sync-result-problems');
@@ -352,6 +423,8 @@ function handleJobStart(data) {
   document.getElementById('sync-current-status').textContent = `${syncProgress.total} novel(s) selected`;
 
   updateSyncStage('providers');
+
+  addSyncLog(`Synchronization started — ${syncProgress.total} novel(s) selected.`, 'info');
 }
 
 function handleNovelStart(data) {
@@ -360,10 +433,12 @@ function handleNovelStart(data) {
   updateSyncProgress(data.current - 1, data.total);
 
   updateSyncStage('providers');
+  addSyncLog(`[${data.current}/${data.total}] ${data.novel}`, 'info');
 }
 
 function handleStage(data) {
   updateSyncStage(data.stage);
+  addSyncLog(`Stage: ${data.stage}`, 'info');
 }
 
 function handleField(data) {
@@ -371,7 +446,11 @@ function handleField(data) {
 
   if (!status) return;
 
-  status.textContent = `Synchronizing ${data.name || data.field}...`;
+  const name = data.name || data.field;
+  const update = data.should_update ? data.value : 'no updates';
+
+  status.textContent = `Synchronizing ${name}...`;
+  addSyncLog(`  ↳ ${name} : ${update}`, 'info');
 }
 
 function handleNovelFinish(data) {
@@ -381,13 +460,38 @@ function handleNovelFinish(data) {
   processNovelResult(result);
 
   updateSyncProgress(data.current, data.total);
+
+  logNovelProblems(result);
+
+  let type = 'success';
+  let message = `[${data.current}/${data.total}] ${result.title}`;
+
+  if (result.errors?.length) {
+    type = 'error';
+    message += ` — completed with ${result.errors.length} error(s)`;
+  } else if (result.warnings?.length) {
+    type = 'warning';
+    message += ` — completed with ${result.warnings.length} warning(s)`;
+  } else if (result.updated) {
+    message += ' — updated';
+  } else {
+    message += ' — skipped';
+  }
+
+  addSyncLog(message, type);
 }
 
 function handleJobFinish(data) {
-  console.log('JOB FINISH:', data);
-
+  const summary = data.summary;
+  addSyncLog(
+    `Synchronization finished — ${summary.total} processed, ` +
+      `${summary.updated} updated, ` +
+      `${summary.skipped} skipped, ` +
+      `${summary.errors} error(s).`,
+    summary.errors > 0 ? 'error' : summary.warnings > 0 ? 'warning' : 'success'
+  );
   // Make sure progress is visually complete.
-  updateSyncProgress(data.summary.total, data.summary.total);
+  updateSyncProgress(summary.total, summary.total);
 
   // Final result screen.
   renderSyncResult(data);
@@ -406,6 +510,15 @@ function bindEvents() {
 
   document.getElementById('sync-start').addEventListener('click', startSync);
   document.getElementById('sync-done').addEventListener('click', resetSyncPanel);
+  document.getElementById('sync-log-clear').addEventListener('click', () => {
+    const list = document.getElementById('sync-log-list');
+
+    if (list) {
+      list.innerHTML = '';
+    }
+
+    syncLog.entries = [];
+  });
 }
 
 function onSourceChanged() {
@@ -484,6 +597,7 @@ async function startSync() {
   setSyncButtonState('loading');
 
   resetSyncProgress();
+  resetSyncLog();
 
   showSyncView('progress');
 
@@ -494,7 +608,7 @@ async function startSync() {
 
     const jobId = result.job_id;
 
-    console.log('Synchronization started:', jobId);
+    //console.log('Synchronization started:', jobId);
 
     listenSyncProgress(jobId, {
       job_start(data) {
@@ -542,7 +656,7 @@ function renderSyncResult(data) {
   const summary = data.summary;
   const results = data.results || [];
 
-  console.log('SYNC DONE:', summary);
+  //console.log('SYNC DONE:', summary);
 
   // Final counters
   document.getElementById('sync-result-total').textContent = summary.total;

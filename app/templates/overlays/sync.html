@@ -7,7 +7,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
   </div>
 
-  <div class="offcanvas-body">
+  <div class="offcanvas-body d-flex flex-column">
     <!-- ========================================================= -->
     <!-- Configuration -->
     <!-- ========================================================= -->
@@ -97,7 +97,7 @@
     <!-- ========================================================= -->
     <!-- Progress -->
     <!-- ========================================================= -->
-    <div id="sync-progress-view" class="d-none">
+    <div id="sync-progress-view" class="d-none sync-progress-view">
       <div class="mb-4">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <div>
@@ -118,42 +118,9 @@
       <div class="card mb-3">
         <div class="card-body">
           <div class="d-flex align-items-center mb-3">
-            <span class="avatar avatar-sm bg-blue-lt me-2">
-              <i class="ti ti-refresh"></i>
-            </span>
-
             <div class="flex-fill min-width-0">
               <div class="fw-bold text-truncate" id="sync-current-novel">Waiting...</div>
-
               <div class="text-muted small" id="sync-current-status">Preparing synchronization</div>
-            </div>
-          </div>
-
-          <!-- Stages -->
-
-          <div id="sync-stages">
-            <div class="d-flex align-items-center mb-2" data-stage="providers">
-              <i class="ti ti-circle me-2 stage-icon"></i>
-
-              <span>Providers</span>
-            </div>
-
-            <div class="d-flex align-items-center mb-2" data-stage="metadata">
-              <i class="ti ti-circle me-2 stage-icon"></i>
-
-              <span>Metadata</span>
-            </div>
-
-            <div class="d-flex align-items-center mb-2" data-stage="commit">
-              <i class="ti ti-circle me-2 stage-icon"></i>
-
-              <span>Commit</span>
-            </div>
-
-            <div class="d-flex align-items-center" data-stage="done">
-              <i class="ti ti-circle me-2 stage-icon"></i>
-
-              <span>Done</span>
             </div>
           </div>
         </div>
@@ -249,7 +216,27 @@
         </div>
       </div>
     </div>
+    <!-- ========================================================= -->
+    <!-- Live logs -->
+    <!-- ========================================================= -->
+    <div id="sync-live-log" class="card mt-3 d-none">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h3 class="card-title mb-0">
+          <i class="ti ti-terminal-2 me-2"></i>
+          Live Log
+        </h3>
+
+        <button type="button" class="btn btn-sm btn-ghost-secondary" id="sync-log-clear">
+          <i class="ti ti-trash"></i>
+        </button>
+      </div>
+
+      <div id="sync-log-container" class="card-body p-0">
+        <div id="sync-log-list" class="p-3"></div>
+      </div>
+    </div>
   </div>
+
   <div class="offcanvas-footer p-3 border-top">
     <!-- Configuration footer -->
 
