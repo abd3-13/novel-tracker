@@ -1,6 +1,13 @@
 import { SORT_OPTIONS } from './sort.js';
-import { updateSelectionBar, exitSelectionMode, clearSelection, selectAll, selectBetweenSelected } from './selection.js';
+import {
+  updateSelectionBar,
+  exitSelectionMode,
+  clearSelection,
+  selectAll,
+  selectBetweenSelected
+} from './selection.js';
 import { library } from './../state.js';
+import { TOOLBAR_TEXT, SELECTION_TEXT } from './../config.js';
 
 function renderSortMenu(sort) {
   return SORT_OPTIONS.map(
@@ -23,7 +30,7 @@ function renderSortMenu(sort) {
 export function updateSortButton(sort) {
   const arrow = sort.direction === 'asc' ? 'ti-sort-ascending' : 'ti-sort-descending';
   const button = document.getElementById('library-sort-button');
-  button.innerHTML = `<i class="ti ti-${sort.icon} me-1"></i><span class="d-none d-md-inline">Sort : ${sort.label}</span> <i class="ti ${arrow} ms-1"></i>`;
+  button.innerHTML = `<i class="ti ti-${sort.icon} me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.sort}: ${sort.label}</span> <i class="ti ${arrow} ms-1"></i>`;
 
   // Remove previous active item
   document.querySelectorAll('.library-sort-item').forEach(item => {
@@ -86,26 +93,26 @@ export function renderToolbar(library) {
         <div class="col">
           <div class="input-icon">
             <span class="input-icon-addon"><i class="ti ti-search"></i></span>
-            <input id="library-search" type="text" class="form-control" placeholder="Search novels...(title, description, tags, author, notes)" value="${library.search}">
+            <input id="library-search" type="text" class="form-control" placeholder="${TOOLBAR_TEXT.searchPlaceholder}" value="${library.search}">
           </div>
         </div>
         <div class="dropdown col-auto">
-          <button id="library-sort-button" class="btn btn-outline-secondary" data-bs-toggle="dropdown"><i class="ti ti-${library.sort.icon} me-1"></i><span class="d-none d-md-inline">Sort: ${library.sort.label}</span></button>
+          <button id="library-sort-button" class="btn btn-outline-secondary" data-bs-toggle="dropdown"><i class="ti ti-${library.sort.icon} me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.sort}: ${library.sort.label}</span></button>
           <div class="dropdown-menu" id="sort-dropdown-menu">${renderSortMenu(library.sort)}</div>
         </div>
-        <div class="col-auto"><button id="toolbar-filter" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#library-filter-panel"><i class="ti ti-filter me-1"></i><span class="d-none d-md-inline">Filter</span></button></div>
-        <div class="col-auto"><button id="toolbar-sync" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#sync-offcanvas"><i class="ti ti-refresh me-1"></i><span class="d-none d-md-inline">Synchronize</span></button></div>
-         <div class="col-auto"><button id="toolbar-select" class="btn btn-outline-secondary"><i class="ti ti-checkbox me-1"></i><span class="d-none d-md-inline">Select</span></button></div>
+        <div class="col-auto"><button id="toolbar-filter" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#library-filter-panel"><i class="ti ti-filter me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.filter}</span></button></div>
+        <div class="col-auto"><button id="toolbar-sync" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#sync-offcanvas"><i class="ti ti-refresh me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.synchronize}</span></button></div>
+         <div class="col-auto"><button id="toolbar-select" class="btn btn-outline-secondary"><i class="ti ti-checkbox me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.select}</span></button></div>
         </div>
       <div id="library-selection-bar" class="mt-2 d-none">
             <div class="card">
                 <div class="card-body py-2">
                     <div class="d-flex align-items-center gap-2">
-                        <div class="flex-fill"><i class="ti ti-checkbox me-1"></i><strong id="selection-count">0 selected</strong></div>
-                        <button id="selection-between" class="btn btn-sm btn-outline-secondary"><i class="ti ti-arrows-horizontal me-1"></i>Between</button>
-                        <button id="selection-select-all" class="btn btn-sm btn-outline-secondary"><i class="ti ti-select-all me-1"></i>Select all</button>
-                        <button id="selection-clear" class="btn btn-sm btn-outline-secondary"><i class="ti ti-x me-1"></i>Clear</button>
-                        <button id="selection-done" class="btn btn-sm btn-primary"><i class="ti ti-check me-1"></i>Done</button>
+                        <div class="flex-fill"><i class="ti ti-checkbox me-1"></i><strong id="selection-count">${SELECTION_TEXT.selected.replace('{count}', 0)}</strong></div>
+                        <button id="selection-between" class="btn btn-sm btn-outline-secondary"><i class="ti ti-arrows-horizontal me-1"></i>${SELECTION_TEXT.between}</button>
+                        <button id="selection-select-all" class="btn btn-sm btn-outline-secondary"><i class="ti ti-select-all me-1"></i>${SELECTION_TEXT.selectAll}</button>
+                        <button id="selection-clear" class="btn btn-sm btn-outline-secondary"><i class="ti ti-x me-1"></i>${SELECTION_TEXT.clear}</button>
+                        <button id="selection-done" class="btn btn-sm btn-primary"><i class="ti ti-check me-1"></i>${SELECTION_TEXT.done}</button>
                     </div>
                 </div>
             </div>

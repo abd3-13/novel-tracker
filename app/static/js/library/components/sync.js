@@ -1,6 +1,7 @@
 import { library } from '../state.js';
 import { getSyncRegistry, runSync, cancelSync, listenSyncProgress } from './../api.js';
 import { showNotification } from './../../notifi.js';
+import { SYNC_TEXT, SYNC_BUTTON_STATES, SYNC_CANCEL_BUTTON_STATES } from './../config.js';
 // Global state
 const syncConfig = {
   source: 'local',
@@ -60,16 +61,16 @@ function resetSyncPanel() {
   // Reset progress UI
   updateSyncProgress(0, 0);
 
-  document.getElementById('sync-current-novel').textContent = 'Waiting...';
-  document.getElementById('sync-current-status').textContent = 'Preparing synchronization';
+  document.getElementById('sync-current-novel').textContent = SYNC_TEXT.waiting;
+  document.getElementById('sync-current-status').textContent = SYNC_TEXT.preparing;
 
   // Reset stages
   updateSyncStage(null);
 
   // Clear result state
-  document.getElementById('sync-result-title').textContent = 'Synchronization Complete';
+  document.getElementById('sync-result-title').textContent = SYNC_TEXT.complete;
 
-  document.getElementById('sync-result-message').textContent = 'Synchronization finished.';
+  document.getElementById('sync-result-message').textContent = SYNC_TEXT.finished;
 
   document.getElementById('sync-result-problem-list').innerHTML = '';
 
@@ -193,10 +194,10 @@ function updateSyncStage(stage) {
   if (!status || !stage) return;
 
   const labels = {
-    providers: 'Fetching data...',
-    metadata: 'Synchronizing metadata...',
+    providers: SYNC_TEXT.fetching,
+    metadata: SYNC_TEXT.metadata,
     commit: 'Saving changes...',
-    done: 'Finishing...'
+    done: SYNC_TEXT.done
   };
 
   status.textContent = labels[stage] || stage;
@@ -205,20 +206,20 @@ function updateSyncStage(stage) {
 function updateCurrentNovel(novel) {
   document.getElementById('sync-current-novel').textContent = novel;
 
-  document.getElementById('sync-current-status').textContent = 'Synchronizing... ';
+  document.getElementById('sync-current-status').textContent = `${SYNC_TEXT.synchronizing} `;
 }
 
 function finishCurrentNovel(result) {
   const status = document.getElementById('sync-current-status');
 
   if (result.errors?.length) {
-    status.textContent = 'Completed with errors';
+    status.textContent = SYNC_TEXT.completedWithErrors;
   } else if (result.warnings?.length) {
-    status.textContent = 'Completed with warnings';
+    status.textContent = SYNC_TEXT.completedWithWarnings;
   } else if (result.updated) {
-    status.textContent = 'Updated';
+    status.textContent = SYNC_TEXT.updated;
   } else {
-    status.textContent = 'Skipped';
+    status.textContent = SYNC_TEXT.skipped;
   }
 }
 
@@ -615,30 +616,7 @@ function updateMetadataToggle() {
 
 function setSyncButtonState(state) {
   const button = document.getElementById('sync-start');
-
-  const states = {
-    idle: {
-      disabled: false,
-      html: '<i class="ti ti-refresh me-1"></i> Synchronize'
-    },
-
-    loading: {
-      disabled: true,
-      html: '<span class="spinner-border spinner-border-sm me-1"></span> Synchronizing...'
-    },
-
-    success: {
-      disabled: true,
-      html: '<i class="ti ti-check me-1"></i> Synchronized'
-    },
-
-    error: {
-      disabled: true,
-      html: '<i class="ti ti-alert-circle me-1"></i> Failed'
-    }
-  };
-
-  const config = states[state];
+  const config = SYNC_BUTTON_STATES[state] || SYNC_BUTTON_STATES.idle;
 
   button.disabled = config.disabled;
   button.innerHTML = config.html;
@@ -646,25 +624,7 @@ function setSyncButtonState(state) {
 
 function setSyncCancelButtonState(state) {
   const button = document.getElementById('sync-cancel');
-
-  const states = {
-    idle: {
-      disabled: false,
-      html: '<i class="ti ti-player-stop me-1"></i> Cancel Synchronization'
-    },
-
-    cancelling: {
-      disabled: true,
-      html: '<span class="spinner-border spinner-border-sm me-1"></span> Cancelling...'
-    },
-
-    done: {
-      disabled: true,
-      html: '<i class="ti ti-check me-1"></i> Cancelled'
-    }
-  };
-
-  const config = states[state];
+  const config = SYNC_CANCEL_BUTTON_STATES[state] || SYNC_CANCEL_BUTTON_STATES.idle;
 
   button.disabled = config.disabled;
   button.innerHTML = config.html;

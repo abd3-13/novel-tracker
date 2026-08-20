@@ -21,6 +21,100 @@ export const STATUS_STYLE = {
   }
 };
 
+export const SYNC_TEXT = {
+  waiting: 'Waiting...',
+  preparing: 'Preparing synchronization',
+  synchronizing: 'Synchronizing...',
+  complete: 'Synchronization Complete',
+  finished: 'Synchronization finished.',
+  currentNovel: 'Synchronizing %name%...',
+  completedWithErrors: 'Completed with errors',
+  completedWithWarnings: 'Completed with warnings',
+  updated: 'Updated',
+  skipped: 'Skipped',
+  fetching: 'Fetching data...',
+  metadata: 'Synchronizing metadata...',
+  commit: 'Saving changes...',
+  done: 'Finishing...',
+  cancelled: 'Synchronization Cancelled',
+  cancelledMessage: '%count% novel(s) were processed before cancellation.',
+  cancelledNotice: 'Synchronization cancelled.'
+};
+
+export const LOGIN_TEXT = {
+  signingIn: 'Signing in...',
+  login: 'Login',
+  loginFailed: 'Unable to communicate with the server.',
+  connectionError: 'Connection Error'
+};
+
+export const FILTER_TEXT = {
+  match: 'Match',
+  all: 'All',
+  any: 'Any',
+  conditions: 'Conditions',
+  addCondition: 'Add Condition',
+  noFilters: 'No filters',
+  noFiltersHint: 'Click "Add Condition" to start filtering your library.',
+  field: 'Field',
+  operator: 'Operator',
+  value: 'Value',
+  emptyValue: '—',
+  delete: 'Delete',
+  nullSummary: '—'
+};
+
+export const SELECTION_TEXT = {
+  selected: '{count} selected',
+  between: 'Between',
+  selectAll: 'Select all',
+  clear: 'Clear',
+  done: 'Done'
+};
+
+export const TOOLBAR_TEXT = {
+  searchPlaceholder: 'Search novels...(title, description, tags, author, notes)',
+  sort: 'Sort',
+  filter: 'Filter',
+  synchronize: 'Synchronize',
+  select: 'Select',
+  searchIcon: 'Search'
+};
+
+export const SYNC_BUTTON_STATES = {
+  idle: {
+    disabled: false,
+    html: '<i class="ti ti-refresh me-1"></i> Synchronize'
+  },
+  loading: {
+    disabled: true,
+    html: '<span class="spinner-border spinner-border-sm me-1"></span> Synchronizing...'
+  },
+  success: {
+    disabled: true,
+    html: '<i class="ti ti-check me-1"></i> Synchronized'
+  },
+  error: {
+    disabled: true,
+    html: '<i class="ti ti-alert-circle me-1"></i> Failed'
+  }
+};
+
+export const SYNC_CANCEL_BUTTON_STATES = {
+  idle: {
+    disabled: false,
+    html: '<i class="ti ti-player-stop me-1"></i> Cancel Synchronization'
+  },
+  cancelling: {
+    disabled: true,
+    html: '<span class="spinner-border spinner-border-sm me-1"></span> Cancelling...'
+  },
+  done: {
+    disabled: true,
+    html: '<i class="ti ti-check me-1"></i> Cancelled'
+  }
+};
+
 export const FILTER_FIELDS = [
   {
     category: 'Chapters',
@@ -169,6 +263,42 @@ export const FILTER_FIELDS = [
 ];
 
 export const FILTER_MAP = new Map(FILTER_FIELDS.flatMap(group => group.items).map(field => [field.field, field]));
+
+export const SORT_OPTIONS = [
+  {
+    group: 'Chapters',
+    items: [
+      { field: 'unread', label: 'Unread', direction: 'desc', icon: 'book-2' },
+      { field: 'progress', label: 'Read Progress', direction: 'desc', icon: 'progress' },
+      { field: 'online', label: 'Online Chapters', direction: 'desc', icon: 'books' },
+      { field: 'local', label: 'Local Chapters', direction: 'desc', icon: 'books' }
+    ]
+  },
+  {
+    group: 'Updates',
+    items: [
+      { field: 'updates', label: 'Updates', direction: 'desc', icon: 'bell' },
+      { field: 'lastChapter', label: 'Last Chapter Time', direction: 'desc', icon: 'clock' }
+    ]
+  },
+  {
+    group: 'Characters',
+    items: [
+      { field: 'newCharacters', label: 'New Characters', direction: 'desc', icon: 'users-plus' },
+      { field: 'characters', label: 'Local Characters', direction: 'desc', icon: 'users' },
+      { field: 'onlineCharacters', label: 'Online Characters', direction: 'desc', icon: 'cloud' }
+    ]
+  },
+  {
+    group: 'Novel',
+    items: [
+      { field: 'title', label: 'Title', direction: 'asc', icon: 'sort-a-z' },
+      { field: 'author', label: 'Author', direction: 'asc', icon: 'user' },
+      { field: 'source', label: 'Source', direction: 'asc', icon: 'world' },
+      { field: 'status', label: 'Status', direction: 'asc', icon: 'circle-check' }
+    ]
+  }
+];
 
 export const OPERATORS = {
   '=': (a, b) => a == b,

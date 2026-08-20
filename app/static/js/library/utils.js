@@ -1,3 +1,5 @@
+import { FILTER_MAP } from './config.js';
+
 export function timeAgo(dateString) {
   if (!dateString || dateString === '0') return '';
 
@@ -39,49 +41,8 @@ export function applySearch(library) {
 }
 
 export function getValue(novel, field) {
-  switch (field) {
-    case 'title':
-      return novel.title;
-
-    case 'author':
-      return novel.author;
-
-    case 'unread':
-      return novel.reading.unread;
-
-    case 'updates':
-      return novel.chapters.diff;
-
-    case 'local':
-      return novel.chapters.local;
-
-    case 'online':
-      return novel.chapters.online;
-
-    case 'characters':
-      return novel.characters.local;
-
-    case 'onlineCharacters':
-      return novel.characters.online;
-
-    case 'newCharacters':
-      return novel.characters.new;
-
-    case 'progress':
-      return novel.reading.percent;
-
-    case 'lastChapter':
-      return novel.chapters.last_online_update;
-
-    case 'source':
-      return novel.source.name;
-
-    case 'status':
-      return novel.status;
-
-    default:
-      return '';
-  }
+  const definition = FILTER_MAP.get(field);
+  return definition ? definition.getter(novel) : '';
 }
 
 let filterId = 0;

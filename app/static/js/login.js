@@ -1,4 +1,5 @@
 import { showNotification } from './notifi.js';
+import { LOGIN_TEXT } from './library/config.js';
 
 const form = document.getElementById('login-form');
 const button = form.querySelector("button[type='submit']");
@@ -13,7 +14,7 @@ form.addEventListener('submit', async e => {
   e.preventDefault();
 
   button.disabled = true;
-  button.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Signing in...`;
+  button.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${LOGIN_TEXT.signingIn}`;
 
   try {
     const response = await fetch(form.action || window.location.pathname, {
@@ -48,9 +49,9 @@ form.addEventListener('submit', async e => {
   } catch (err) {
     console.error(err);
 
-    showNotification(`Unable to communicate with the server.\n\n ${err}`, 'error', 'Connection Error');
+    showNotification(`${LOGIN_TEXT.loginFailed}\n\n ${err}`, 'error', LOGIN_TEXT.connectionError);
   } finally {
     button.disabled = false;
-    button.innerHTML = 'Login';
+    button.innerHTML = LOGIN_TEXT.login;
   }
 });

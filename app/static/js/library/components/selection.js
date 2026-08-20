@@ -1,4 +1,5 @@
 import { library } from './../state.js';
+import { SELECTION_TEXT } from './../config.js';
 
 function getVisibleNovelOrder(container) {
   return [...container.querySelectorAll('.novel-card')].map(card => Number(card.dataset.id));
@@ -119,7 +120,7 @@ export function updateSelectionBar(library) {
 
   if (!bar || !count) return;
 
-  count.textContent = `${library.ids.size} selected`;
+  count.textContent = SELECTION_TEXT.selected.replace('{count}', library.ids.size);
 
   bar.classList.toggle('d-none', !library.selectionMode);
 }
