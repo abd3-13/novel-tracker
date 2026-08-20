@@ -66,12 +66,32 @@ class SyncManager:
         try:
             runner = SyncRunner()
 
-            result = runner.run(job)
+            result = runner.run(job, is_cancelled=execution.is_cancelled)
 
-            execution.finish(result)
+            if execution.is_cancelled():
+                execution.cancelled(result)
+            else:
+                execution.finish(result)
 
         except Exception as exc:  # noqa: BLE001
             execution.fail(exc)
 
         finally:
             execution.close_events()
+
+    def cancel(self, job_id):
+        """
+        Request cancellation of an execution.
+        """
+
+        execution = self.get(job_id)
+
+        if execution is None:
+            return None
+
+        if execution.done:
+            return execution
+
+        execution.cancel()
+
+        return execution

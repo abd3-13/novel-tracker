@@ -189,6 +189,42 @@ def api_sync_status(job_id):
     )
 
 
+@main_bp.route("/api/v1/sync/<job_id>/cancel", methods=["POST"])
+@login_required
+def api_sync_cancel(job_id):
+    sync_manager = current_app.extensions["sync_manager"]
+
+    execution = sync_manager.cancel(job_id)
+
+    if execution is None:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Synchronization job not found.",
+                "category": "warning",
+            }
+        ), 404
+
+    if execution.done:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Synchronization has already finished.",
+                "category": "warning",
+                "execution": execution.snapshot(),
+            }
+        ), 409
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Synchronization cancellation requested.",
+            "category": "success",
+            "execution": execution.snapshot(),
+        }
+    )
+
+
 @main_bp.route("/api/v1/sync/<job_id>/events", methods=["GET"])
 @login_required
 def api_sync_events(job_id):
@@ -205,7 +241,6 @@ def api_sync_events(job_id):
             }
         ), 404
 
-    @stream_with_context
     def event_stream():
         while True:
             event = execution.events.get()
@@ -218,7 +253,7 @@ def api_sync_events(job_id):
             yield (f"event: {event.type}\ndata: {json.dumps(event.data)}\n\n")
 
     return Response(
-        event_stream(),
+        stream_with_context(event_stream()),
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

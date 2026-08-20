@@ -35,7 +35,7 @@ class SyncRunner:
     # Public API
     # ------------------------------------------------------------------
 
-    def run(self, job):
+    def run(self, job, is_cancelled=None):
         """
         Execute a synchronization job.
         """
@@ -52,6 +52,8 @@ class SyncRunner:
         self._on_start(total)
 
         for current, novel in enumerate(novels, start=1):
+            if is_cancelled and is_cancelled():
+                break
             self._on_progress(current, total, novel)
             self._emit(
                 job,
@@ -73,7 +75,11 @@ class SyncRunner:
                 job, Event.NOVEL_FINISH, current=current, total=total, result=result
             )
 
-        summary = self._on_finish(results)
+            if is_cancelled and is_cancelled():
+                break
+        cancelled = bool(is_cancelled and is_cancelled())
+        summary: dict[str, int | bool] = self._on_finish(results)
+        summary["cancelled"] = cancelled
         self._emit(job, Event.JOB_FINISH, results=results, summary=summary)
 
         return {

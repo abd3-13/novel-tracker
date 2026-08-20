@@ -2,6 +2,7 @@ from app.constants import Event, MetadataKey, Provider, Stage
 
 from .collector import SyncCollector
 from .context import SyncContext
+from .execution import SyncCancelled
 from .logger import SyncLogger
 from .metadata import FIELDS
 from .providers import (
@@ -33,7 +34,7 @@ class SyncEngine:
     # Public API
     # ------------------------------------------------------------------
 
-    def run(self, job, novel):
+    def run(self, job, novel, is_cancelled=None):
         """
         Execute a synchronization job for a single novel.
         """
@@ -43,16 +44,20 @@ class SyncEngine:
         ctx.logger.job(job.profile)
 
         self._register_providers(ctx)
+        self._check_cancelled(is_cancelled)
 
         ctx.emit(Event.STAGE, stage=Stage.PROVIDERS)
 
         self._load_providers(ctx)
+        self._check_cancelled(is_cancelled)
         ctx.emit(Event.STAGE, stage=Stage.METADATA)
 
         self._sync_fields(ctx)
+        self._check_cancelled(is_cancelled)
         ctx.emit(Event.STAGE, stage=Stage.COMMIT)
 
         self._commit(ctx)
+        self._check_cancelled(is_cancelled)
         ctx.emit(Event.STAGE, stage=Stage.DONE)
 
         return ctx.result or {
@@ -163,3 +168,7 @@ class SyncEngine:
             "errors": list(ctx.logger.errors),
             "warnings": list(ctx.logger.warnings),
         }
+
+    def _check_cancelled(self, is_cancelled):
+        if is_cancelled and is_cancelled():
+            raise SyncCancelled()

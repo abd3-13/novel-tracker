@@ -1,6 +1,7 @@
 import time
 from dataclasses import dataclass, field
 from queue import Queue
+from threading import Event, Lock
 from typing import Any
 from uuid import uuid4
 
@@ -16,24 +17,21 @@ class SyncExecution:
     SyncRunner/SyncEngine report progress through SyncEvent.
     """
 
-    # Unique execution identifier
     job_id: str = field(default_factory=lambda: str(uuid4()))
 
-    # Execution state
     status: str = "pending"
 
-    # Timing
     start_time: float | None = None
     end_time: float | None = None
 
-    # Final result
     result: dict[str, Any] | None = None
 
-    # Fatal execution error
     error: str | None = None
 
-    # Event stream
     events: Queue[SyncEvent | None] = field(default_factory=Queue)
+
+    cancel_event: Event = field(default_factory=Event)
+    lock: Lock = field(default_factory=Lock)
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -42,22 +40,51 @@ class SyncExecution:
     def start(self):
         """Mark execution as running."""
 
-        self.status = "running"
-        self.start_time = time.time()
+        with self.lock:
+            self.status = "running"
+            self.start_time = time.time()
 
     def finish(self, result: dict[str, Any] | None = None):
         """Mark execution as successfully completed."""
 
-        self.result = result
-        self.status = "finished"
-        self.end_time = time.time()
+        with self.lock:
+            self.result = result
+            self.status = "finished"
+            self.end_time = time.time()
 
     def fail(self, error: Exception | str):
         """Mark execution as failed."""
 
-        self.error = str(error)
-        self.status = "failed"
-        self.end_time = time.time()
+        with self.lock:
+            self.error = str(error)
+            self.status = "failed"
+            self.end_time = time.time()
+
+    def cancel(self):
+        """
+        Request cancellation.
+
+        This does not forcibly terminate the worker thread.
+        """
+
+        self.cancel_event.set()
+
+        with self.lock:
+            if self.status == "running":
+                self.status = "cancelling"
+
+    def is_cancelled(self) -> bool:
+        """Return whether cancellation was requested."""
+
+        return self.cancel_event.is_set()
+
+    def cancelled(self, result: dict[str, Any] | None = None):
+        """Mark execution as cancelled."""
+
+        with self.lock:
+            self.result = result
+            self.status = "cancelled"
+            self.end_time = time.time()
 
     # ------------------------------------------------------------------
     # Events
@@ -83,9 +110,19 @@ class SyncExecution:
 
     @property
     def done(self) -> bool:
-        """Whether execution has finished or failed."""
+        """Whether execution has finished."""
 
-        return self.status in {"finished", "failed"}
+        return self.status in {"finished", "failed", "cancelled"}
+
+    @property
+    def cancelling(self) -> bool:
+        """Whether cancellation has been requested."""
+
+        return self.cancel_event.is_set()
+
+    # ------------------------------------------------------------------
+    # Snapshot
+    # ------------------------------------------------------------------
 
     def snapshot(self) -> dict[str, Any]:
         """
@@ -100,4 +137,9 @@ class SyncExecution:
             "result": self.result,
             "error": self.error,
             "done": self.done,
+            "cancelling": self.cancelling,
         }
+
+
+class SyncCancelled(Exception):
+    """Raised when synchronization cancellation was requested."""
