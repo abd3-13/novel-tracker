@@ -23,6 +23,7 @@ const syncLog = {
   entries: []
 };
 
+let syncProblemsForDownload = [];
 let syncJobId = null;
 let syncEventSource = null;
 let syncCancellationRequested = false;
@@ -71,6 +72,12 @@ function resetSyncPanel() {
   document.getElementById('sync-result-message').textContent = 'Synchronization finished.';
 
   document.getElementById('sync-result-problem-list').innerHTML = '';
+
+  syncProblemsForDownload = [];
+  const downloadButton = document.getElementById('sync-download-problems');
+  if (downloadButton) {
+    downloadButton.classList.add('d-none');
+  }
 
   document.getElementById('sync-result-problems').classList.add('d-none');
 
@@ -332,9 +339,48 @@ function logNovelProblems(result) {
   }
 }
 
+function formatSyncIssueFilename() {
+  const now = new Date();
+  const stamp = [
+    now.getFullYear().toString().slice(-2),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+    '-',
+    String(now.getHours()).padStart(2, '0'),
+    String(now.getMinutes()).padStart(2, '0'),
+    String(now.getSeconds()).padStart(2, '0')
+  ].join('');
+
+  return `novel_sync_issues_${stamp}.txt`;
+}
+
+function downloadSyncProblems() {
+  if (!syncProblemsForDownload.length) return;
+
+  const lines = syncProblemsForDownload.map(problem => {
+    const label = problem.type === 'error' ? 'ERROR' : 'WARNING';
+    return `${label} | ${problem.title} | ${problem.message}`;
+  });
+
+  const content = `${lines.join('\n')}\n`;
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = formatSyncIssueFilename();
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  URL.revokeObjectURL(url);
+  showNotification('Synchronization issues downloaded.', 'success');
+}
+
 function renderSyncProblems(results) {
   const container = document.getElementById('sync-result-problem-list');
   const section = document.getElementById('sync-result-problems');
+  const downloadButton = document.getElementById('sync-download-problems');
 
   container.innerHTML = '';
 
@@ -358,12 +404,21 @@ function renderSyncProblems(results) {
     }
   });
 
+  syncProblemsForDownload = problems;
+
   if (!problems.length) {
     section.classList.add('d-none');
+    if (downloadButton) {
+      downloadButton.classList.add('d-none');
+    }
     return;
   }
 
   section.classList.remove('d-none');
+
+  if (downloadButton) {
+    downloadButton.classList.remove('d-none');
+  }
 
   for (const problem of problems) {
     const isError = problem.type === 'error';
@@ -521,6 +576,7 @@ function bindEvents() {
   document.getElementById('sync-start').addEventListener('click', startSync);
   document.getElementById('sync-cancel').addEventListener('click', cancelCurrentSync);
   document.getElementById('sync-done').addEventListener('click', resetSyncPanel);
+  document.getElementById('sync-download-problems').addEventListener('click', downloadSyncProblems);
   document.getElementById('sync-log-clear').addEventListener('click', () => {
     const list = document.getElementById('sync-log-list');
 
@@ -744,7 +800,7 @@ function renderSyncResult(data) {
     title.textContent = 'Synchronization Cancelled';
     message.textContent = `${summary.total} novel(s) were processed before cancellation.`;
 
-    icon.className = 'ti ti-player-stop fs-1';
+    icon.className = 'ti ti-cancel fs-1';
     icon.parentElement.className = 'avatar avatar-xl bg-warning-lt mb-3';
   } else if (summary.errors > 0) {
     title.textContent = 'Synchronization Completed with Errors';

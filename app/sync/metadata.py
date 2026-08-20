@@ -127,7 +127,6 @@ def sync_character_assets(ctx, field: MetadataField):
     provider.fetch_characters()
 
 
-# TODO: Implement a separate synchronizer for progress, currently using the local provider
 def sync_progress(ctx, field: MetadataField):
     """
     Synchronize MoonReader progress.
