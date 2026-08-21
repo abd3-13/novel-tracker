@@ -15,7 +15,7 @@ import json
 import os
 import sqlite3
 
-from app.constants import Default, MetadataKey, SettingKey
+from app.constants import SETTING_METADATA, Default, MetadataKey, SettingKey
 from app.utils.tools import find_database_file, normalize_title
 
 # ============================================================================
@@ -182,9 +182,6 @@ def init_db():
         SettingKey.EPUB_READER_FROM: "current",
         SettingKey.MOON_PROGRESS_FILE: "/data/data/com.flyersoft.moonreaderp/shared_prefs/positions10.xml",
         SettingKey.CHARAC_API: "https://idruid.webnovel.com/go/api/book-role",
-        SettingKey.CARD_OVERLAY_METADATA: json.dumps(
-            ["characters", "progress", "chapter", "updates", "time"]
-        ),
     }
     for key, value in default_settings.items():
         cur.execute(
@@ -256,6 +253,34 @@ def get_settings_dict():
     return settings_dict
 
 
+def get_setting_metadata(key):
+    metadata = SETTING_METADATA.get(key)
+
+    if metadata is None:
+        return {
+            "label": key.replace("_", " ").title(),
+            "description": "",
+            "type": "string",
+            "group": "Other",
+            "icon": "settings",
+        }
+
+    return {
+        "key": key,
+        **metadata,
+    }
+
+
+def get_all_setting_metadata():
+    return {
+        key: {
+            "key": key,
+            **metadata,
+        }
+        for key, metadata in SETTING_METADATA.items()
+    }
+
+
 def get_value(key, default=None):
     """
     Return a setting value.
@@ -284,6 +309,59 @@ def save_setting(key, value):
     execute(
         "UPDATE settings SET value=? WHERE key=?", (value, key), commit=True, close=True
     )
+
+
+def normalize_setting_value(value, metadata):
+    setting_type = metadata.get("type", "string")
+
+    if setting_type == "boolean":
+        if isinstance(value, bool):
+            return "1" if value else "0"
+
+        if str(value).lower() in {"1", "true", "yes", "on"}:
+            return "1"
+
+        if str(value).lower() in {"0", "false", "no", "off"}:
+            return "0"
+
+        raise ValueError("Value must be a boolean.")
+
+    if setting_type == "number":
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            raise ValueError("Value must be a number.") from None
+
+        minimum = metadata.get("min")
+        maximum = metadata.get("max")
+
+        if minimum is not None and number < minimum:
+            raise ValueError(f"Value must be at least {minimum}.")
+
+        if maximum is not None and number > maximum:
+            raise ValueError(f"Value must be at most {maximum}.")
+
+        return str(number)
+
+    if setting_type == "choice":
+        options = metadata.get("options", [])
+        allowed_values = {option["value"] for option in options}
+
+        if value not in allowed_values:
+            raise ValueError("Invalid setting choice.")
+
+        return str(value)
+
+    if setting_type in {"string", "url", "path", "password"}:
+        if value is None:
+            return ""
+
+        if not isinstance(value, str):
+            raise ValueError("Value must be a string.")
+
+        return value
+
+    raise ValueError(f"Unsupported setting type: {setting_type}.")
 
 
 # ============================================================================

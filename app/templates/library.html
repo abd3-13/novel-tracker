@@ -41,6 +41,7 @@
     <script>
       window.flashMessages = {{ get_flashed_messages(with_categories=true) | tojson }};
       window.librarySettings = {{ settings | tojson }};
+      window.librarySettingsMetadata = {{ settings_metadata | tojson }};
     </script>
     <script src="{{ url_for('static', filename='vendor/tabler/tabler.min.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/library/app.js') }}"></script>

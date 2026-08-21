@@ -12,6 +12,7 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
+from app.constants import SETTING_METADATA
 from app.sync.job import SyncJob
 from app.sync.metadata import FIELDS
 from app.utils import db
@@ -83,15 +84,9 @@ for logger_name in ["werkzeug", "gunicorn.access", "gunicorn.error"]:
 def index():
     settings = db.get_settings_dict()
 
-    return render_template("library.html", settings=settings)
-
-
-@main_bp.route("/library")
-@login_required
-def library():
-    settings = db.get_settings_dict()
-
-    return render_template("library.html", settings=settings)
+    return render_template(
+        "library.html", settings=settings, settings_metadata=SETTING_METADATA
+    )
 
 
 @main_bp.route("/api/v1/library")
@@ -108,13 +103,29 @@ def api_library():
 @main_bp.route("/api/v1/settings")
 @login_required
 def api_settings():
-    return jsonify({"data": db.get_settings_dict()})
+    settings = db.get_settings_dict()
+
+    metadata = {
+        key: {
+            "key": key,
+            **definition,
+        }
+        for key, definition in SETTING_METADATA.items()
+    }
+
+    return jsonify(
+        {
+            "data": settings,
+            "metadata": metadata,
+        }
+    )
 
 
 @main_bp.route("/api/v1/settings", methods=["POST"])
 @login_required
 def api_save_setting():
     payload = request.get_json(silent=True) or {}
+
     key = payload.get("key")
     value = payload.get("value")
 
@@ -127,13 +138,47 @@ def api_save_setting():
             }
         ), 400
 
-    db.save_setting(key, value)
+    metadata = SETTING_METADATA.get(key)
+
+    if metadata is None:
+        return jsonify(
+            {
+                "success": False,
+                "message": f"Unknown setting: {key}.",
+                "category": "warning",
+            }
+        ), 400
+
+    if metadata.get("readonly"):
+        return jsonify(
+            {
+                "success": False,
+                "message": f"Setting '{key}' is read-only.",
+                "category": "warning",
+            }
+        ), 400
+
+    try:
+        normalized_value = db.normalize_setting_value(value, metadata)
+    except ValueError as exc:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(exc),
+                "category": "warning",
+            }
+        ), 400
+
+    db.save_setting(key, normalized_value)
+
     return jsonify(
         {
             "success": True,
             "message": "Setting saved.",
             "category": "success",
-            "data": {key: db.get_value(key)},
+            "data": {
+                key: db.get_value(key),
+            },
         }
     )
 

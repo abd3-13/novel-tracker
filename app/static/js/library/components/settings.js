@@ -1,3 +1,5 @@
+import { escapeHtml } from './../utils.js';
+
 const OVERLAY_METADATA_OPTIONS = [
   { id: 'characters', label: 'Characters', icon: 'users' },
   { id: 'progress', label: 'Read progress', icon: 'percentage' },
@@ -6,175 +8,260 @@ const OVERLAY_METADATA_OPTIONS = [
   { id: 'time', label: 'Last update', icon: 'clock' }
 ];
 
-function parseOverlayMetadata(rawValue) {
-  const fallback = ['characters', 'progress', 'chapter', 'updates', 'time'];
+const OVERLAY_STORAGE_KEY = 'library.cardOverlayMetadata';
 
-  if (!rawValue) return fallback;
+const DEFAULT_OVERLAY_METADATA = ['characters', 'progress', 'chapter', 'updates', 'time'];
+
+function parseOverlayMetadata(rawValue) {
+  if (!rawValue) return DEFAULT_OVERLAY_METADATA;
 
   try {
     const parsed = JSON.parse(rawValue);
-    return Array.isArray(parsed) && parsed.length ? parsed : fallback;
+    return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_OVERLAY_METADATA;
   } catch {
-    return fallback;
+    return DEFAULT_OVERLAY_METADATA;
   }
 }
 
 export function getSelectedOverlayMetadata() {
-  const settings = window.librarySettings || {};
-  return parseOverlayMetadata(settings.CARD_OVERLAY_METADATA || settings.card_overlay_metadata);
+  const stored = sessionStorage.getItem(OVERLAY_STORAGE_KEY);
+
+  if (stored) {
+    return parseOverlayMetadata(stored);
+  }
+
+  return [...DEFAULT_OVERLAY_METADATA];
 }
 
-export function renderSettingsPanel() {
-  const settings = window.librarySettings || {};
-  const selected = new Set(getSelectedOverlayMetadata());
+function renderSettingControl(key, value, metadata) {
+  console.count('renderSettingControl');
+  const type = metadata?.type || 'string';
+  const safeValue = value ?? '';
 
-  const databaseRows = Object.entries(settings)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => {
-      const normalized = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
-      return `
-        <div class="mb-3">
-          <label class="form-label small text-uppercase text-muted mb-1">${key}</label>
-          <input type="text" class="form-control form-control-sm settings-db-field" data-setting-key="${key}" value="${String(normalized).replace(/"/g, '&quot;')}" />
+  if (metadata?.readonly) {
+    return `
+      <input
+        type="text"
+        class="form-control"
+        value="${escapeHtml(String(safeValue))}"
+        readonly
+      />
+    `;
+  }
+
+  if (type === 'boolean') {
+    const enabled = ['1', 'true', 'yes', 'on'].includes(String(safeValue).toLowerCase());
+
+    return `
+      <label class="form-check form-switch mb-0">
+        <input
+          class="form-check-input settings-field"
+          type="checkbox"
+          data-setting-key="${key}"
+          ${enabled ? 'checked' : ''}
+        />
+        <span class="form-check-label">
+          ${enabled ? 'Enabled' : 'Disabled'}
+        </span>
+      </label>
+    `;
+  }
+
+  if (type === 'choice') {
+    const options = (metadata.options || [])
+      .map(
+        option => `
+        <option
+          value="${escapeHtml(String(option.value))}"
+          ${String(option.value) === String(safeValue) ? 'selected' : ''}
+        >
+          ${escapeHtml(option.label)}
+        </option>
+      `
+      )
+      .join('');
+
+    return `
+      <select
+        class="form-select settings-field"
+        data-setting-key="${key}"
+      >
+        ${options}
+      </select>
+    `;
+  }
+
+  if (type === 'number') {
+    const min = metadata.min !== undefined ? `min="${metadata.min}"` : '';
+    const max = metadata.max !== undefined ? `max="${metadata.max}"` : '';
+    const step = metadata.step !== undefined ? `step="${metadata.step}"` : '';
+
+    return `
+      <input
+        type="number"
+        class="form-control settings-field"
+        data-setting-key="${key}"
+        value="${escapeHtml(String(safeValue))}"
+        ${min}
+        ${max}
+        ${step}
+      />
+    `;
+  }
+
+  const inputType = type === 'password' ? 'password' : type === 'url' ? 'url' : 'text';
+
+  return `
+    <input
+      type="${inputType}"
+      class="form-control settings-field"
+      data-setting-key="${key}"
+      value="${escapeHtml(String(safeValue))}"
+      ${type === 'url' ? 'autocomplete="url"' : ''}
+    />
+  `;
+}
+
+function renderSettingRow(key, value, metadata) {
+  console.count('renderSettingGroup');
+  const label = metadata?.label || key;
+  const description = metadata?.description || '';
+  const icon = metadata?.icon || 'settings';
+
+  return `
+    <div class="mb-4">
+      <div class="row align-items-center">
+        <div class="col">
+          <label class="form-label mb-1">
+            <i class="ti ti-${icon} me-1 text-secondary"></i>
+            ${escapeHtml(label)}
+          </label>
+
+          ${description ? `<div class="text-secondary small">${escapeHtml(description)}</div>` : ''}
         </div>
-      `;
-    })
-    .join('');
 
-  const overlayRows = OVERLAY_METADATA_OPTIONS.map(
-    option => `
-    <label class="form-check mb-2">
-      <input class="form-check-input settings-overlay-toggle" type="checkbox" data-setting-value="${option.id}" ${selected.has(option.id) ? 'checked' : ''} />
-      <span class="form-check-label d-flex align-items-center gap-2">
-        <i class="ti ti-${option.icon}"></i>
-        ${option.label}
-      </span>
-    </label>
-  `
-  ).join('');
-
-  document.getElementById('library-settings-content').innerHTML = `
-    <div class="accordion" id="library-settings-accordion">
-      <div class="accordion-item border-1">
-        <h2 class="accordion-header">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#library-settings-db" aria-expanded="false" aria-controls="library-settings-db">
-            <span class="d-flex align-items-center gap-2">
-              <i class="ti ti-database text-muted"></i>
-              <span>Database settings</span>
-            </span>
-            <span class="ms-auto text-muted small"><i class="ti ti-selector"></i></span>
-          </button>
-        </h2>
-        <div id="library-settings-db" class="accordion-collapse collapse" data-bs-parent="#library-settings-accordion">
-          <div class="accordion-body">
-            <div class="mb-3">
-              ${databaseRows || '<div class="text-muted">No settings available.</div>'}
-            </div>
-            <button type="button" class="btn btn-primary" id="save-database-settings">
-              <i class="ti ti-device-floppy me-1"></i>
-              Save database settings
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="accordion-item border-1">
-        <h2 class="accordion-header">
-          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#library-settings-overlay" aria-expanded="true" aria-controls="library-settings-overlay">
-            <span class="d-flex align-items-center gap-2">
-              <i class="ti ti-layout-grid text-muted"></i>
-              <span>Card overlay metadata</span>
-            </span>
-            <span class="ms-auto text-muted small"><i class="ti ti-selector"></i></span>
-          </button>
-        </h2>
-        <div id="library-settings-overlay" class="accordion-collapse collapse show" data-bs-parent="#library-settings-accordion">
-          <div class="accordion-body">
-            <div class="text-secondary small mb-3">Choose which metadata appears on each novel card overlay.</div>
-            ${overlayRows}
-            <button type="button" class="btn btn-primary mt-3" id="save-overlay-settings">
-              <i class="ti ti-device-floppy me-1"></i>
-              Save overlay settings
-            </button>
-          </div>
+        <div class="col-auto" style="min-width: 220px">
+          ${renderSettingControl(key, value, metadata)}
         </div>
       </div>
     </div>
   `;
-
-  const saveDatabaseButton = document.getElementById('save-database-settings');
-  if (saveDatabaseButton) {
-    saveDatabaseButton.addEventListener('click', async () => {
-      const inputs = document.querySelectorAll('.settings-db-field');
-      const updates = [];
-
-      inputs.forEach(input => {
-        const key = input.dataset.settingKey;
-        const value = input.value;
-        const original = window.librarySettings?.[key];
-
-        if (key && String(original ?? '') !== String(value)) {
-          updates.push({ key, value });
-        }
-      });
-
-      if (!updates.length) {
-        if (window.showLibraryNotification) {
-          window.showLibraryNotification('No setting changes to save.', 'info');
-        }
-        return;
-      }
-
-      try {
-        const results = [];
-        for (const item of updates) {
-          const result = await saveSetting(item.key, item.value);
-          results.push(result);
-        }
-
-        const lastResult = results.at(-1) || { success: true, message: 'Settings saved.' };
-        if (window.showLibraryNotification) {
-          window.showLibraryNotification(lastResult.message || 'Settings saved.', lastResult.category || 'success');
-        }
-      } catch (error) {
-        if (window.showLibraryNotification) {
-          window.showLibraryNotification(error.message || 'Failed to save settings.', 'error');
-        }
-      }
-    });
-  }
-
-  const saveOverlayButton = document.getElementById('save-overlay-settings');
-  if (saveOverlayButton) {
-    saveOverlayButton.addEventListener('click', async () => {
-      const selected = Array.from(document.querySelectorAll('.settings-overlay-toggle:checked')).map(
-        el => el.dataset.settingValue
-      );
-      const current = getSelectedOverlayMetadata();
-
-      if (JSON.stringify(selected) === JSON.stringify(current)) {
-        if (window.showLibraryNotification) {
-          window.showLibraryNotification('No overlay changes to save.', 'info');
-        }
-        return;
-      }
-
-      try {
-        const result = await saveSetting('CARD_OVERLAY_METADATA', selected);
-        window.librarySettings = { ...window.librarySettings, CARD_OVERLAY_METADATA: JSON.stringify(selected) };
-        if (window.showLibraryNotification) {
-          window.showLibraryNotification(result.message || 'Overlay settings saved.', result.category || 'success');
-        }
-      } catch (error) {
-        if (window.showLibraryNotification) {
-          window.showLibraryNotification(error.message || 'Failed to save overlay settings.', 'error');
-        }
-      }
-    });
-  }
 }
 
-export async function saveSetting(key, value) {
+function renderSettingGroup(group, settings, metadata) {
+  console.count('renderSettingGroup');
+  const entries = Object.entries(metadata)
+    .filter(([, definition]) => (definition.group || 'Other') === group)
+    .sort(([a], [b]) => {
+      const labelA = metadata[a]?.label || a;
+      const labelB = metadata[b]?.label || b;
+      return labelA.localeCompare(labelB);
+    });
+
+  if (!entries.length) return '';
+
+  const rows = entries.map(([key]) => renderSettingRow(key, settings[key], metadata[key])).join('');
+
+  return `
+    <div class="card mb-3">
+      <div class="card-header">
+        <div class="d-flex align-items-center gap-2">
+          <i class="ti ti-settings text-secondary"></i>
+          <h3 class="card-title">${escapeHtml(group)}</h3>
+        </div>
+      </div>
+
+      <div class="card-body">
+        ${rows}
+      </div>
+    </div>
+  `;
+}
+
+function renderOverlaySettings() {
+  const selected = new Set(getSelectedOverlayMetadata());
+
+  return `
+    <div class="card mb-3">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">Card overlay metadata</h3>
+          <div class="text-secondary small">
+            Choose which metadata appears on novel cards.
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="form-selectgroup form-selectgroup-boxes d-flex flex-wrap gap-2">
+          ${OVERLAY_METADATA_OPTIONS.map(
+            option => `
+            <label class="form-selectgroup-item flex-fill">
+              <input
+                type="checkbox"
+                class="form-selectgroup-input settings-overlay-toggle"
+                data-setting-value="${option.id}"
+                ${selected.has(option.id) ? 'checked' : ''}
+              />
+
+              <span class="form-selectgroup-label d-flex align-items-center justify-content-center gap-2 py-3">
+                <i class="ti ti-${option.icon}"></i>
+                ${option.label}
+              </span>
+            </label>
+          `
+          ).join('')}
+        </div>
+
+        <div class="text-secondary small mt-3">
+          These settings apply only to this browser session.
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+export function renderSettingsPanel() {
+  const settings = window.librarySettings || {};
+  const metadata = window.librarySettingsMetadata || {};
+
+  const groups = [...new Set(Object.values(metadata).map(definition => definition.group || 'Other'))];
+
+  const settingsContent = groups
+    .sort((a, b) => a.localeCompare(b))
+    .map(group => renderSettingGroup(group, settings, metadata))
+    .join('');
+
+  document.getElementById('library-settings-content').innerHTML = `
+    ${renderOverlaySettings()}
+    ${settingsContent}
+
+    <div class="settings-save-bar">
+      <div class="d-flex justify-content-end">
+        <button type="button" class="btn btn-primary" id="save-settings">
+          <i class="ti ti-device-floppy me-1"></i>
+          Save settings
+        </button>
+      </div>
+    </div>
+  `;
+
+  bindSettingsEvents();
+}
+
+function bindSettingsEvents() {
+  const saveButton = document.getElementById('save-settings');
+
+  if (saveButton) {
+    saveButton.addEventListener('click', saveSettings);
+  }
+
+  document.querySelectorAll('.settings-overlay-toggle').forEach(input => {
+    input.addEventListener('change', saveOverlaySettings);
+  });
+}
+
+export async function saveSettings(key, value) {
   const response = await fetch('/api/v1/settings', {
     method: 'POST',
     headers: {
@@ -196,8 +283,50 @@ export async function saveSetting(key, value) {
   return result;
 }
 
+function saveButtonState(saving) {
+  const button = document.getElementById('save-settings');
+
+  if (!button) return;
+
+  button.disabled = saving;
+
+  button.innerHTML = saving
+    ? `
+      <span class="spinner-border spinner-border-sm me-1"></span>
+      Saving...
+    `
+    : `
+      <i class="ti ti-device-floppy me-1"></i>
+      Save settings
+    `;
+}
+
+function saveOverlaySettings() {
+  const selected = Array.from(document.querySelectorAll('.settings-overlay-toggle:checked')).map(
+    input => input.dataset.settingValue
+  );
+
+  if (!selected.length) {
+    window.showLibraryNotification?.('Select at least one overlay item.', 'warning');
+
+    renderSettingsPanel();
+    return;
+  }
+
+  sessionStorage.setItem(OVERLAY_STORAGE_KEY, JSON.stringify(selected));
+
+  window.showLibraryNotification?.('Card overlay settings updated.', 'success');
+
+  document.dispatchEvent(
+    new CustomEvent('library:overlay-settings-changed', {
+      detail: { selected }
+    })
+  );
+}
+
 export function initSettingsPanel() {
   const panel = document.getElementById('library-settings-panel');
+
   if (!panel) return;
 
   panel.addEventListener('show.bs.offcanvas', () => {
@@ -207,9 +336,11 @@ export function initSettingsPanel() {
   renderSettingsPanel();
 
   const button = document.querySelector('[data-bs-target="#library-settings-panel"]');
+
   if (!button || button.dataset.settingsBound === 'true') return;
 
   button.dataset.settingsBound = 'true';
+
   button.addEventListener('click', () => {
     renderSettingsPanel();
   });

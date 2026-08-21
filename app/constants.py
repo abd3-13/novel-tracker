@@ -190,6 +190,159 @@ class SettingKey(StrEnum):
     CARD_OVERLAY_METADATA = "CARD_OVERLAY_METADATA"
 
 
+SETTING_METADATA = {
+    SettingKey.DB_PATH: {
+        "label": "Database path",
+        "description": "Path to the application SQLite database.",
+        "type": "string",
+        "group": "Database",
+        "icon": "database",
+    },
+    SettingKey.ENDPOINT: {
+        "label": "API endpoint",
+        "description": "Base URL used for online chapter and book data.",
+        "type": "url",
+        "group": "Network",
+        "icon": "world",
+    },
+    SettingKey.IMG_ENDPOINT: {
+        "label": "Image endpoint",
+        "description": "Base URL used for remote images.",
+        "type": "url",
+        "group": "Network",
+        "icon": "photo",
+    },
+    SettingKey.USER_AGENT: {
+        "label": "User agent",
+        "description": "User-Agent header sent with online requests.",
+        "type": "string",
+        "group": "Network",
+        "icon": "brand-chrome",
+    },
+    SettingKey.REFER_URL: {
+        "label": "Referer URL",
+        "description": "Referer header sent with online requests.",
+        "type": "url",
+        "group": "Network",
+        "icon": "link",
+    },
+    SettingKey.DELAY_FROM: {
+        "label": "Minimum request delay",
+        "description": "Minimum delay between online requests, in seconds.",
+        "type": "number",
+        "group": "Network",
+        "icon": "clock",
+        "min": 0,
+        "max": 300,
+        "step": 1,
+    },
+    SettingKey.DELAY_TO: {
+        "label": "Maximum request delay",
+        "description": "Maximum delay between online requests, in seconds.",
+        "type": "number",
+        "group": "Network",
+        "icon": "clock-plus",
+        "min": 0,
+        "max": 300,
+        "step": 1,
+    },
+    SettingKey.LOCAL_EPUB_DIR: {
+        "label": "Local EPUB directory",
+        "description": "Directory containing local EPUB files.",
+        "type": "path",
+        "group": "Library",
+        "icon": "folder",
+    },
+    SettingKey.COVER_PATH: {
+        "label": "Cover directory",
+        "description": "Directory where novel cover images are stored.",
+        "type": "path",
+        "group": "Library",
+        "icon": "photo",
+    },
+    SettingKey.CHECK_ERROR_LINK: {
+        "label": "Check error links",
+        "description": "Check online links that previously returned errors.",
+        "type": "boolean",
+        "group": "Library",
+        "icon": "link-check",
+    },
+    SettingKey.API_TIMEOUT: {
+        "label": "API timeout",
+        "description": "Maximum time to wait for an online API request, in seconds.",
+        "type": "number",
+        "group": "Network",
+        "icon": "hourglass",
+        "min": 1,
+        "max": 300,
+        "step": 1,
+    },
+    SettingKey.SECRETS_KEY: {
+        "label": "Secret key",
+        "description": "Application secret used for protected operations.",
+        "type": "password",
+        "group": "Security",
+        "icon": "key",
+    },
+    SettingKey.LAST_BULK_TIME: {
+        "label": "Last bulk synchronization",
+        "description": "Timestamp of the last bulk synchronization.",
+        "type": "string",
+        "group": "Synchronization",
+        "icon": "history",
+        "readonly": True,
+    },
+    SettingKey.UPDATE_LOCAL_ONLINE: {
+        "label": "Update direction",
+        "description": "Controls the direction used when updating local and online chapter data.",
+        "type": "choice",
+        "group": "Synchronization",
+        "icon": "arrows-exchange",
+        "options": [
+            {
+                "value": "local",
+                "label": "Local",
+            },
+            {
+                "value": "online",
+                "label": "Online",
+            },
+        ],
+    },
+    SettingKey.EPUB_READER_FROM: {
+        "label": "EPUB reader progress",
+        "description": "Select where reading progress should be obtained from.",
+        "type": "choice",
+        "group": "Library",
+        "icon": "book-2",
+        "options": [
+            {
+                "value": "current",
+                "label": "Current reader",
+            },
+            {
+                "value": "moonreader",
+                "label": "Moon+ Reader",
+            },
+        ],
+    },
+    SettingKey.MOON_PROGRESS_FILE: {
+        "label": "Moon+ Reader progress file",
+        "description": "Path to the Moon+ Reader progress XML file.",
+        "type": "path",
+        "group": "Library",
+        "icon": "file-code",
+    },
+    SettingKey.CHARAC_API: {
+        "label": "Character API",
+        "description": "API endpoint used to retrieve book character information.",
+        "type": "url",
+        "group": "Network",
+        "icon": "users",
+    },
+}
+
+
 # =============================================================================
 # Metadata namespaces and source vocabularies
 # =============================================================================
