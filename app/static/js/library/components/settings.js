@@ -34,7 +34,6 @@ export function getSelectedOverlayMetadata() {
 }
 
 function renderSettingControl(key, value, metadata) {
-  console.count('renderSettingControl');
   const type = metadata?.type || 'string';
   const safeValue = value ?? '';
 
@@ -123,7 +122,6 @@ function renderSettingControl(key, value, metadata) {
 }
 
 function renderSettingRow(key, value, metadata) {
-  console.count('renderSettingGroup');
   const label = metadata?.label || key;
   const description = metadata?.description || '';
   const icon = metadata?.icon || 'settings';
@@ -149,7 +147,6 @@ function renderSettingRow(key, value, metadata) {
 }
 
 function renderSettingGroup(group, settings, metadata) {
-  console.count('renderSettingGroup');
   const entries = Object.entries(metadata)
     .filter(([, definition]) => (definition.group || 'Other') === group)
     .sort(([a], [b]) => {
@@ -315,13 +312,13 @@ function saveOverlaySettings() {
 
   sessionStorage.setItem(OVERLAY_STORAGE_KEY, JSON.stringify(selected));
 
-  window.showLibraryNotification?.('Card overlay settings updated.', 'success');
-
   document.dispatchEvent(
     new CustomEvent('library:overlay-settings-changed', {
       detail: { selected }
     })
   );
+
+  window.showLibraryNotification?.('Card overlay settings updated.', 'success');
 }
 
 export function initSettingsPanel() {

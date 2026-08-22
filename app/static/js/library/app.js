@@ -84,4 +84,10 @@ export function updateLibrary() {
   enableSelection(library_container, library);
 }
 
+document.addEventListener('library:overlay-settings-changed', () => {
+  const library_container = document.getElementById('library-content');
+  renderGrid(library_container, library.visible);
+  //enableSelection(library_container, library);
+});
+
 init();
