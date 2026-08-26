@@ -1,6 +1,5 @@
 // static/js/library/components/novel-card.js
 
-import { timeAgo } from './../utils.js';
 import { STATUS_STYLE } from './../config.js';
 import { getSelectedOverlayMetadata } from './settings.js';
 import { CARD_METADATA } from './card-metadata.js';
