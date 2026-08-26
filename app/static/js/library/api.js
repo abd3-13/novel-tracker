@@ -101,3 +101,28 @@ export function listenSyncProgress(jobId, handlers = {}) {
 
   return source;
 }
+
+export async function saveSetting(key, value) {
+  const response = await fetch('/api/v1/settings', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ key, value })
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+
+  if (!contentType.includes('application/json')) {
+    const text = await response.text();
+    throw new Error(text || `Failed to save setting "${key}" (${response.status}).`);
+  }
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || `Failed to save setting "${key}".`);
+  }
+
+  return result;
+}
