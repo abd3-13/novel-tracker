@@ -1,0 +1,39 @@
+....................................................FF.................. [ 92%]
+......                                                                   [100%]
+=================================== FAILURES ===================================
+_______________ test_database_settings_include_overlay_metadata ________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x713188b5b0>
+tmp_path = PosixPath('/tmp/pytest-of-user/pytest-1/test_database_settings_include0')
+
+    def test_database_settings_include_overlay_metadata(monkeypatch, tmp_path):
+        db_path = tmp_path / "settings.db"
+        monkeypatch.setattr(db, "DEFAULT_DB", str(db_path))
+        db.init_db()
+    
+        rows = db.list_setting_rows()
+        keys = {row["key"] for row in rows}
+    
+>       assert SettingKey.CARD_OVERLAY_METADATA in keys
+E       AttributeError: type object 'SettingKey' has no attribute 'CARD_OVERLAY_METADATA'
+
+tests/unit/test_settings.py:15: AttributeError
+___________________ test_save_overlay_metadata_persists_json ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x71318aa510>
+tmp_path = PosixPath('/tmp/pytest-of-user/pytest-1/test_save_overlay_metadata_per0')
+
+    def test_save_overlay_metadata_persists_json(monkeypatch, tmp_path):
+        db_path = tmp_path / "settings-overlays.db"
+        monkeypatch.setattr(db, "DEFAULT_DB", str(db_path))
+        db.init_db()
+    
+        value = ["characters", "progress", "chapter"]
+>       db.save_setting(SettingKey.CARD_OVERLAY_METADATA, json.dumps(value))
+E       AttributeError: type object 'SettingKey' has no attribute 'CARD_OVERLAY_METADATA'
+
+tests/unit/test_settings.py:25: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/test_settings.py::test_database_settings_include_overlay_metadata
+FAILED tests/unit/test_settings.py::test_save_overlay_metadata_persists_json
+2 failed, 76 passed in 0.50s

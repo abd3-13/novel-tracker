@@ -67,16 +67,16 @@ class SyncJob:
         except ValueError:
             raise ValueError(f"Invalid sync mode: {mode}") from None
 
-        unknown = [value for value in fields if value not in FIELDS]
-
-        if unknown:
-            raise ValueError(f"Unknown metadata fields: {', '.join(unknown)}")
-
         if not isinstance(fields, list):
             raise TypeError("Sync fields must be a list.")
 
         if not all(isinstance(value, str) for value in fields):
             raise ValueError("Sync fields must contain strings.")
+
+        unknown = [value for value in fields if value not in FIELDS]
+
+        if unknown:
+            raise ValueError(f"Unknown metadata fields: {', '.join(unknown)}")
 
         novels = data.get(SyncJobKey.NOVELS, [])
 

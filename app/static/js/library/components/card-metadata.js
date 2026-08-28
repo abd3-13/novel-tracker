@@ -104,14 +104,6 @@ export const CARD_METADATA = [
     getTitle: novel => `Chapters on ${novel.source.name}, Latest Chap: ${novel.chapters.last_online_update}`
   },
   {
-    id: 'chapters_new',
-    label: 'New chapters',
-    icon: 'bookmarks',
-    overlay: true,
-    getValue: novel => novel.chapters.diff,
-    getTitle: () => 'New Chapters'
-  },
-  {
     id: 'last_sync',
     label: 'Last sync',
     icon: 'refresh',
@@ -134,30 +126,6 @@ export const CARD_METADATA = [
     overlay: true,
     getValue: novel => novel.reading.unread,
     getTitle: () => 'Unread Chapters'
-  },
-  {
-    id: 'read_progress',
-    label: 'Read Progress',
-    icon: 'percentage',
-    overlay: true,
-    getValue: novel => novel.reading.percent,
-    getTitle: () => 'Read Progress'
-  },
-  {
-    id: 'characters_local',
-    label: 'Local Characters',
-    icon: 'user',
-    overlay: true,
-    getValue: novel => novel.characters.local,
-    getTitle: () => 'Local Characters'
-  },
-  {
-    id: 'characters_online',
-    label: 'Online Characters',
-    icon: 'users',
-    overlay: true,
-    getValue: novel => novel.characters.online,
-    getTitle: () => 'Online Characters'
   },
   {
     id: 'characters_new',

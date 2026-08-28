@@ -30,60 +30,61 @@ export function getSelectedOverlayMetadata() {
   }
 }
 
-function renderSettingControl(key, value, metadata) {
-  const type = metadata?.type || 'string';
-  const safeValue = value ?? '';
+// ---------------------------------------------------------------------------
+// Control rendering — dispatch table instead of an if/else ladder.
+// Each renderer gets (key, safeValue, metadata) and returns markup.
+// ---------------------------------------------------------------------------
 
-  if (metadata?.readonly) {
-    return `
-      <div class="input-group">
-        <input type="text" class="form-control" value="${escapeHtml(String(safeValue))}" readonly/>
-        <span class="input-group-text"><i class="ti ti-lock"></i></span>
-      </div>
-    `;
-  }
+function renderReadonlyControl(_key, safeValue) {
+  return `
+    <div class="input-group">
+      <input type="text" class="form-control" value="${escapeHtml(String(safeValue))}" readonly/>
+      <span class="input-group-text"><i class="ti ti-lock"></i></span>
+    </div>
+  `;
+}
 
-  if (type === 'boolean') {
-    const enabled = ['1', 'true', 'yes', 'on'].includes(String(safeValue).toLowerCase());
+function renderBooleanControl(key, safeValue) {
+  const enabled = ['1', 'true', 'yes', 'on'].includes(String(safeValue).toLowerCase());
 
-    return `
-      <label class="form-check form-switch m-0">
-        <input class="form-check-input settings-field" type="checkbox" data-setting-key="${key}" ${enabled ? 'checked' : ''}/>
-        <span class="form-check-label">${enabled ? 'Enabled' : 'Disabled'}</span>
-      </label>
-    `;
-  }
+  return `
+    <label class="form-check form-switch m-0">
+      <input class="form-check-input settings-field" type="checkbox" data-setting-key="${key}" ${enabled ? 'checked' : ''}/>
+      <span class="form-check-label">${enabled ? 'Enabled' : 'Disabled'}</span>
+    </label>
+  `;
+}
 
-  if (type === 'choice') {
-    const options = (metadata.options || [])
-      .map(
-        option =>
-          `<option value="${escapeHtml(String(option.value))}" ${String(option.value) === String(safeValue) ? 'selected' : ''}>${escapeHtml(option.label)}</option>`
-      )
-      .join('');
+function renderChoiceControl(key, safeValue, metadata) {
+  const options = (metadata.options || [])
+    .map(
+      option =>
+        `<option value="${escapeHtml(String(option.value))}" ${String(option.value) === String(safeValue) ? 'selected' : ''}>${escapeHtml(option.label)}</option>`
+    )
+    .join('');
 
-    return `
-      <select class="form-select settings-field" data-setting-key="${key}">${options}</select>
-    `;
-  }
+  return `<select class="form-select settings-field" data-setting-key="${key}">${options}</select>`;
+}
 
-  if (type === 'number') {
-    const min = metadata.min !== undefined ? `min="${metadata.min}"` : '';
-    const max = metadata.max !== undefined ? `max="${metadata.max}"` : '';
-    const step = metadata.step !== undefined ? `step="${metadata.step}"` : '';
+function renderNumberControl(key, safeValue, metadata) {
+  const min = metadata.min !== undefined ? `min="${metadata.min}"` : '';
+  const max = metadata.max !== undefined ? `max="${metadata.max}"` : '';
+  const step = metadata.step !== undefined ? `step="${metadata.step}"` : '';
 
-    return `
-      <div class="input-group">
-        <input type="number" class="form-control settings-field" data-setting-key="${key}" value="${escapeHtml(String(safeValue))}"
-          ${min}
-          ${max}
-          ${step}
-        />
-        ${metadata.unit ? `<span class="input-group-text">${escapeHtml(metadata.unit)}</span>` : ''}
-      </div>
-    `;
-  }
+  return `
+    <div class="input-group">
+      <input type="number" class="form-control settings-field" data-setting-key="${key}" value="${escapeHtml(String(safeValue))}"
+        ${min}
+        ${max}
+        ${step}
+      />
+      ${metadata.unit ? `<span class="input-group-text">${escapeHtml(metadata.unit)}</span>` : ''}
+    </div>
+  `;
+}
 
+function renderTextControl(key, safeValue, metadata) {
+  const type = metadata?.type;
   const inputType = type === 'password' ? 'password' : type === 'url' ? 'url' : 'text';
 
   return `
@@ -93,6 +94,25 @@ function renderSettingControl(key, value, metadata) {
       ${metadata.placeholder ? `placeholder="${escapeHtml(metadata.placeholder)}"` : ''}
     />
   `;
+}
+
+const CONTROL_RENDERERS = {
+  boolean: renderBooleanControl,
+  choice: renderChoiceControl,
+  number: renderNumberControl
+};
+
+function renderSettingControl(key, value, metadata) {
+  const safeValue = value ?? '';
+
+  if (metadata?.readonly) {
+    return renderReadonlyControl(key, safeValue, metadata);
+  }
+
+  const type = metadata?.type || 'string';
+  const renderer = CONTROL_RENDERERS[type] || renderTextControl;
+
+  return renderer(key, safeValue, metadata);
 }
 
 function renderSettingRow(key, value, metadata) {
@@ -115,19 +135,35 @@ function renderSettingRow(key, value, metadata) {
   `;
 }
 
-function renderSettingGroup(group, settings, metadata) {
-  const entries = Object.entries(metadata)
-    .filter(([, definition]) => (definition.group || 'Other') === group)
-    .sort(([a], [b]) => {
-      const labelA = metadata[a]?.label || a;
-      const labelB = metadata[b]?.label || b;
+// ---------------------------------------------------------------------------
+// Grouping — computed once per render instead of re-filtering metadata
+// for every group (was O(groups * total settings), now O(total settings)).
+// ---------------------------------------------------------------------------
 
-      return labelA.localeCompare(labelB);
-    });
+function groupSettingKeys(metadata) {
+  const groups = new Map();
 
-  if (!entries.length) return '';
+  for (const [key, definition] of Object.entries(metadata)) {
+    const group = definition.group || 'Other';
 
-  const rows = entries.map(([key]) => renderSettingRow(key, settings[key], metadata[key])).join('');
+    if (!groups.has(group)) {
+      groups.set(group, []);
+    }
+
+    groups.get(group).push(key);
+  }
+
+  for (const keys of groups.values()) {
+    keys.sort((a, b) => (metadata[a]?.label || a).localeCompare(metadata[b]?.label || b));
+  }
+
+  return groups;
+}
+
+function renderSettingGroup(group, keys, settings, metadata) {
+  if (!keys.length) return '';
+
+  const rows = keys.map(key => renderSettingRow(key, settings[key], metadata[key])).join('');
 
   return `
     <div class="card mb-3">
@@ -203,12 +239,10 @@ export function renderSettingsPanel() {
   const settings = window.librarySettings || {};
   const metadata = window.librarySettingsMetadata || {};
 
-  const groups = [...new Set(Object.values(metadata).map(definition => definition.group || 'Other'))];
+  const grouped = groupSettingKeys(metadata);
+  const sortedGroupNames = [...grouped.keys()].sort((a, b) => a.localeCompare(b));
 
-  const settingsContent = groups
-    .sort((a, b) => a.localeCompare(b))
-    .map(group => renderSettingGroup(group, settings, metadata))
-    .join('');
+  const settingsContent = sortedGroupNames.map(group => renderSettingGroup(group, grouped.get(group), settings, metadata)).join('');
 
   container.innerHTML = `
     ${renderOverlaySettings()}
@@ -245,16 +279,9 @@ async function saveSettings() {
   fields.forEach(field => {
     const key = field.dataset.settingKey;
 
-    if (!key || field.readOnly) return;
+    if (!key) return;
 
-    let value;
-
-    if (field.type === 'checkbox') {
-      value = field.checked ? '1' : '0';
-    } else {
-      value = field.value;
-    }
-
+    const value = field.type === 'checkbox' ? (field.checked ? '1' : '0') : field.value;
     const original = window.librarySettings?.[key];
 
     if (String(original ?? '') !== String(value)) {
@@ -292,7 +319,6 @@ function saveButtonState(saving) {
   if (!button) return;
 
   button.disabled = saving;
-
   button.innerHTML = saving ? `<span class="spinner-border spinner-border-sm me-1"></span>Saving...` : `<i class="ti ti-device-floppy me-1"></i>Save settings`;
 }
 
@@ -301,7 +327,6 @@ function saveOverlaySettings() {
 
   if (!selected.length) {
     window.showLibraryNotification?.('Select at least one overlay item.', 'warning');
-
     renderSettingsPanel();
     return;
   }
@@ -318,19 +343,5 @@ export function initSettingsPanel() {
 
   if (!panel) return;
 
-  panel.addEventListener('show.bs.offcanvas', () => {
-    renderSettingsPanel();
-  });
-
   renderSettingsPanel();
-
-  const button = document.querySelector('[data-bs-target="#library-settings-panel"]');
-
-  if (!button || button.dataset.settingsBound === 'true') return;
-
-  button.dataset.settingsBound = 'true';
-
-  button.addEventListener('click', () => {
-    renderSettingsPanel();
-  });
 }

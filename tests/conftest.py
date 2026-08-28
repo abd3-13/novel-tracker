@@ -29,13 +29,14 @@ def sync_job():
 
 @pytest.fixture
 def event_collector():
-    events = []
+    class EventCollector:
+        def __init__(self):
+            self.events = []
 
-    def collect(event):
-        events.append(event)
+        def __call__(self, event):
+            self.events.append(event)
 
-    collect.events = events
-    return collect
+    return EventCollector()
 
 
 @pytest.fixture
