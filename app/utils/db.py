@@ -148,7 +148,8 @@ def init_db():
       local_lastchaptitle TEXT,
       local_lastchapfile TEXT,
       progress INTEGER NOT NULL DEFAULT 0,
-      progress_updated DATETIME
+      progress_updated DATETIME,
+      discord_channel_url TEXT,
     )
   """)
     # ------------------------------------------------------------------
@@ -415,13 +416,6 @@ def update_novel(novel_id, updates, table=DEFAULT_TABLE):
     return True
 
 
-def delete_novel(novel_id, table=DEFAULT_TABLE):
-    """
-    Delete one novel.
-    """
-    execute(f"DELETE FROM {table} WHERE id=?", (novel_id,), commit=True, close=True)
-
-
 def delete_novels(ids, table=DEFAULT_TABLE):
     """
     Delete multiple novels.
@@ -433,6 +427,17 @@ def delete_novels(ids, table=DEFAULT_TABLE):
         "1,2,3"
     """
     execute(f"DELETE FROM {table} WHERE id IN ({ids})", commit=True, close=True)
+
+
+def get_novel(novel_id, table=DEFAULT_TABLE):
+    """
+    Return one novel by ID.
+    """
+    return fetch_one(
+        f"SELECT * FROM {table} WHERE id=?",
+        (novel_id,),
+        row_factory=True,
+    )
 
 
 def get_db_file(filename, table=DEFAULT_TABLE):

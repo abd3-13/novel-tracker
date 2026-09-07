@@ -12,6 +12,46 @@ export async function fetchNovels() {
   return json.data;
 }
 
+export async function fetchNovel(novelId) {
+  const response = await fetch(`/api/v1/library/${novelId}`);
+
+  const result = await response.json();
+
+  if (!response.ok) throw new Error(result.message || `Failed to load novel with ID ${novelId}.`);
+
+  return result.data;
+}
+
+export async function updateNovel(novelId, updates) {
+  const response = await fetch(`/api/v1/library/${novelId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(updates)
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) throw new Error(result.message || `Failed to update novel with ID ${novelId}.`);
+
+  return result;
+}
+
+export async function deleteNovel(novelId) {
+  const response = await fetch(`/api/v1/library/${novelId}`, {
+    method: 'DELETE'
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || `Failed to delete novel with ID ${novelId}.`);
+  }
+
+  return result;
+}
+
 export async function fetchSyncMetadata() {
   const response = await fetch('/api/v1/sync/registry');
 

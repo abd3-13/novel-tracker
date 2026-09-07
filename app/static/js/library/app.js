@@ -90,4 +90,23 @@ document.addEventListener('library:overlay-settings-changed', () => {
   //enableSelection(library_container, library);
 });
 
+
+document.addEventListener('library:novel-deleted', async () => {
+  try {
+    library.novels = await fetchNovels();
+    updateLibrary();
+  } catch (error) {
+    window.showLibraryNotification?.(error.message || 'Failed to refresh the library.', 'error');
+  }
+});
+
+document.addEventListener('library:novel-updated', async () => {
+  try {
+    library.novels = await fetchNovels();
+    updateLibrary();
+  } catch (error) {
+    window.showLibraryNotification?.(error.message || 'Failed to refresh the library.', 'error');
+  }
+});
+
 init();

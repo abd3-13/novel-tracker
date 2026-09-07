@@ -20,6 +20,30 @@ from app.utils.filters import log_SpamFilter
 
 main_bp = Blueprint("main", __name__)
 
+NOVEL_EDITABLE_FIELDS = {
+    "name",
+    "url",
+    "localchap",
+    "onlinechap",
+    "latestchaptime",
+    "status",
+    "source",
+    "notes",
+    "filepath",
+    "author",
+    "description",
+    "tags",
+    "characters",
+    "online_characters",
+    "cover_path",
+    "local_lastchaptitle",
+    "local_lastchapfile",
+    "progress",
+    "progress_updated",
+    "epub_exists",
+    "discord_channel_url",
+}
+
 
 def build_library_novel(row):
     local_chapters = int(row[3] or 0)
@@ -72,6 +96,7 @@ def build_library_novel(row):
             "can_edit": True,
             "can_delete": True,
         },
+        "discord_channel_url": row[24] or "",
     }
 
 
@@ -98,6 +123,69 @@ def api_library():
     library = [build_library_novel(row) for row in rows]
 
     return jsonify({"data": library})
+
+
+@main_bp.route("/api/v1/library/<int:novel_id>", methods=["GET", "PATCH"])
+@login_required
+def api_library_novel(novel_id):
+    table = db.get_user_table(current_user)
+    row = db.get_novel(novel_id, table=table)
+
+    if row is None:
+        return jsonify(
+            {
+                "success": False,
+                "message": f"Novel with ID {novel_id} was not found.",
+                "category": "warning",
+            }
+        ), 404
+
+    if request.method == "GET":
+        return jsonify(
+            {
+                "success": True,
+                "data": dict(row),
+            }
+        )
+
+    payload = request.get_json(silent=True) or {}
+
+    updates = {
+        key: value for key, value in payload.items() if key in NOVEL_EDITABLE_FIELDS
+    }
+
+    if not updates:
+        return jsonify(
+            {
+                "success": False,
+                "message": "No editable fields were provided.",
+                "category": "warning",
+            }
+        ), 400
+
+    try:
+        db.update_novel(novel_id, updates, table=table)
+
+    except Exception as e:
+        print(f"Failed to update novel with ID {novel_id}: {e!s}")
+        return jsonify(
+            {
+                "success": False,
+                "message": f"Failed to update novel with ID {novel_id}. {e!s}",
+                "category": "error",
+            }
+        ), 500
+
+    updated = db.get_novel(novel_id, table=table)
+
+    return jsonify(
+        {
+            "success": True,
+            "message": f"Novel with ID {novel_id} updated.",
+            "category": "success",
+            "data": dict(updated),
+        }
+    )
 
 
 @main_bp.route("/api/v1/settings")

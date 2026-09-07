@@ -134,5 +134,13 @@ export const CARD_METADATA = [
     overlay: true,
     getValue: novel => novel.characters.new,
     getTitle: () => 'New Characters'
+  },
+  {
+    id: 'discord_channel_url',
+    label: 'Discord Channel URL',
+    icon: 'brand-discord',
+    overlay: true,
+    getValue: novel => novel.discord_channel_url || '',
+    getTitle: () => 'Discord Channel URL'
   }
 ];

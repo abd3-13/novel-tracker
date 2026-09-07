@@ -155,7 +155,7 @@ class LocalProvider(BaseProvider):
             self.ctx.logger.error(
                 f"Error fetching MoonReader progress for {self.novel[MetadataKey.TITLE]}: {e}"
             )
-        return progress
+        return progress.chapter if progress else None
 
 
 # =============================================================================

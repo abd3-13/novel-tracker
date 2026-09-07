@@ -136,7 +136,7 @@ def sync_progress(ctx, field: MetadataField):
     Synchronize MoonReader progress.
     """
     # generic_sync(ctx, field)
-    ctx.emit(Event.FIELD, field=field.column)
+
     provider = ctx.providers.get_provider(ctx.job.source)
 
     new_value = provider.get_progress()
@@ -414,6 +414,18 @@ FIELDS = {
         order=610,
         sources={
             Provider.LOCAL: MetadataKey.EPUB_EXISTS,
+        },
+        synchronizer=generic_sync,
+    ),
+    MetadataKey.DISCORD_CHANNEL_URL: MetadataField(
+        column=DatabaseColumn.DISCORD_CHANNEL_URL,
+        group=MetadataGroup.BASIC,
+        name=MetadataLabel.DISCORD_CHANNEL_URL,
+        description=MetadataDescription.DISCORD_CHANNEL_URL,
+        icon=MetadataIcon.DISCORD,
+        order=620,
+        sources={
+            Provider.LOCAL: MetadataKey.DISCORD_CHANNEL_URL,
         },
         synchronizer=generic_sync,
     ),

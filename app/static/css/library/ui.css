@@ -107,6 +107,153 @@
   object-fit: cover;
 }
 
+/* ==========================================================
+   Novel Card Hover
+   ========================================================== */
+
+.novel-card {
+  position: relative;
+}
+
+.novel-cover {
+  position: relative;
+  isolation: isolate;
+}
+
+.novel-card-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+
+  display: flex;
+  align-items: stretch;
+
+  padding: 0.9rem;
+
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+
+  opacity: 0;
+  visibility: hidden;
+
+  transition:
+    opacity 0.18s ease,
+    visibility 0.18s ease;
+
+  pointer-events: none;
+}
+
+.novel-card:hover .novel-card-overlay,
+.novel-card:focus-within .novel-card-overlay {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.novel-card-overlay-content {
+  width: 100%;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.novel-card-description {
+  flex: 1 1 auto;
+
+  min-height: 0;
+
+  overflow: hidden;
+
+  color: rgba(255, 255, 255, 0.95);
+
+  font-size: 0.8rem;
+  line-height: 1.45;
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 12;
+}
+
+.nt-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+
+  max-height: 4.5rem;
+  overflow: hidden;
+
+  margin-top: 0.75rem;
+}
+
+.nt-card-tags .badge {
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.novel-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+
+  margin-top: 0.75rem;
+}
+
+.nt-card-action {
+  flex: 1 1 auto;
+
+  min-width: 0;
+
+  white-space: nowrap;
+
+  border: 0;
+
+  font-size: 0.72rem;
+}
+
+.nt-card-action i {
+  font-size: 0.9rem;
+}
+
+.nt-card-action:hover {
+  transform: translateY(-1px);
+}
+
+.nt-card-action[data-card-action='delete'] {
+  color: var(--tblr-danger);
+}
+
+@media (max-width: 767.98px) {
+  .novel-card-overlay {
+    padding: 0.6rem;
+  }
+
+  .novel-card-description {
+    font-size: 0.72rem;
+    -webkit-line-clamp: 10;
+    line-clamp: 10;
+  }
+
+  .novel-card-actions {
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+  }
+
+  .nt-card-action {
+    padding: 0.3rem 0.4rem;
+    font-size: 0.65rem;
+  }
+
+  .nt-card-action span {
+    display: none;
+  }
+
+  .nt-card-action i {
+    font-size: 0.95rem;
+  }
+}
+
 #notification-container .alert {
   box-shadow: var(--tblr-shadow-card);
   background-color: var(--tblr-bg-surface);

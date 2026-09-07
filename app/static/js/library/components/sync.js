@@ -38,6 +38,16 @@ function updateSyncConfig() {
   syncConfig.force = document.getElementById('sync-force').checked;
 }
 
+export function openNovelSync(id) {
+  syncConfig.ids = [Number(id)];
+
+  resetSyncPanel();
+
+  const offcanvas = document.getElementById('sync-offcanvas');
+
+  if (!offcanvas) return;
+}
+
 export function initSyncPanel(library) {
   renderMetadata();
 
@@ -550,10 +560,7 @@ function handleNovelFinish(data) {
 function handleJobFinish(data) {
   const summary = data.summary;
   addSyncLog(
-    `Synchronization finished — ${summary.total} processed, ` +
-      `${summary.updated} updated, ` +
-      `${summary.skipped} skipped, ` +
-      `${summary.errors} error(s).`,
+    `Synchronization finished — ${summary.total} processed, ` + `${summary.updated} updated, ` + `${summary.skipped} skipped, ` + `${summary.errors} error(s).`,
     summary.errors > 0 ? 'error' : summary.warnings > 0 ? 'warning' : 'success'
   );
   // Make sure progress is visually complete.
@@ -642,7 +649,7 @@ function collectJob() {
 
     fields: Array.from(document.querySelectorAll('.sync-field:checked')).map(cb => cb.value),
 
-    novels: [...library.ids]
+    novels: syncConfig.ids.length ? [...syncConfig.ids] : [...library.ids]
   };
 }
 

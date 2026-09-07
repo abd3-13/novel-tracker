@@ -157,6 +157,7 @@ class MetadataKey(StrEnum):
 
     FILEPATH = "filepath"
     EPUB_EXISTS = "epub_exists"
+    DISCORD_CHANNEL_URL = "discord_channel_url"
 
 
 DatabaseColumn = MetadataKey
@@ -530,6 +531,7 @@ class MetadataLabel(StrEnum):
     PROGRESS = "Reading Progress"
     FILEPATH = "EPUB File"
     EPUB_EXISTS = "EPUB Exists"
+    DISCORD_CHANNEL_URL = "Discord Channel URL"
 
 
 class MetadataDescription(StrEnum):
@@ -552,6 +554,7 @@ class MetadataDescription(StrEnum):
     PROGRESS = "Reading progress imported from Moon+ Reader."
     FILEPATH = "Path to the EPUB file."
     EPUB_EXISTS = "Whether the EPUB file exists on disk."
+    DISCORD_CHANNEL_URL = "URL of the Discord channel associated with the novel."
 
 
 class MetadataIcon(StrEnum):
@@ -574,6 +577,7 @@ class MetadataIcon(StrEnum):
     PROGRESS = "progress"
     FILE = "file"
     FILE_CHECK = "file-check"
+    DISCORD = "brand-discord"
 
 
 class ExecutionStatus(StrEnum):

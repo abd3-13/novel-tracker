@@ -1,7 +1,6 @@
 // static/js/library/views/grid.js
 
-import { renderNovelCard, initNovelTitleScrolling } from '../components/novel-card.js';
-import { library } from './../state.js';
+import { renderNovelCard, bindNovelCardActions } from '../components/novel-card.js';
 
 export function renderGrid(container, novels) {
   container.innerHTML = `<div class="row row-cols-2 row-cols-md-4 row-cols-xl-6 g-3"></div>`;
@@ -12,5 +11,5 @@ export function renderGrid(container, novels) {
     grid.insertAdjacentHTML('beforeend', renderNovelCard(novel));
   });
 
-  initNovelTitleScrolling();
+  bindNovelCardActions(grid, novels);
 }
