@@ -385,6 +385,7 @@ class ReadingProgress:
 
 _progress_cache: dict[str, ReadingProgress] | None = None
 _progress_source: str | None = None
+_progress_mtime: int | None = None
 
 
 def _load_progress(xml_path: str | None) -> dict[str, ReadingProgress]:
@@ -394,28 +395,37 @@ def _load_progress(xml_path: str | None) -> dict[str, ReadingProgress]:
 
     global _progress_cache
     global _progress_source
+    global _progress_mtime
 
-    if _progress_cache is not None and _progress_source == xml_path:
+    xml_file = Path(xml_path) if xml_path else None
+
+    if xml_file is None:
+        logger.warning("Moon+ Reader XML path not configured.")
+        _progress_cache = {}
+        _progress_source = xml_path
+        _progress_mtime = None
+        return _progress_cache
+
+    if not xml_file.exists():
+        logger.warning("Moon+ Reader XML not found: %s", xml_file)
+        _progress_cache = {}
+        _progress_source = xml_path
+        _progress_mtime = None
+        return _progress_cache
+
+    mtime = xml_file.stat().st_mtime_ns
+
+    if (
+        _progress_cache is not None
+        and _progress_source == xml_path
+        and _progress_mtime == mtime
+    ):
         logger.debug("Using cached Moon+ Reader progress.")
         return _progress_cache
 
     logger.info("Loading Moon+ Reader progress...")
 
     progress: dict[str, ReadingProgress] = {}
-
-    if not xml_path:
-        logger.warning("Moon+ Reader XML path not configured.")
-        _progress_cache = progress
-        _progress_source = xml_path
-        return progress
-
-    xml_file = Path(xml_path)
-
-    if not xml_file.exists():
-        logger.warning("Moon+ Reader XML not found: %s", xml_file)
-        _progress_cache = progress
-        _progress_source = xml_path
-        return progress
 
     tree = ET.parse(xml_file)
     root = tree.getroot()
@@ -438,6 +448,7 @@ def _load_progress(xml_path: str | None) -> dict[str, ReadingProgress]:
 
     _progress_cache = progress
     _progress_source = xml_path
+    _progress_mtime = mtime
 
     return progress
 

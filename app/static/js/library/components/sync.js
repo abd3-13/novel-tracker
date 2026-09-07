@@ -705,8 +705,11 @@ async function startSync() {
         console.error('SYNC ERROR:', error);
 
         showNotification('Synchronization event stream failed.', 'error');
+        syncEventSource = null;
+        syncJobId = null;
 
         setSyncButtonState('error');
+        setSyncCancelButtonState('done');
       }
     });
   } catch (err) {

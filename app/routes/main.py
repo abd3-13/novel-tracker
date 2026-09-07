@@ -125,7 +125,7 @@ def api_library():
     return jsonify({"data": library})
 
 
-@main_bp.route("/api/v1/library/<int:novel_id>", methods=["GET", "PATCH"])
+@main_bp.route("/api/v1/library/<int:novel_id>", methods=["GET", "PATCH", "DELETE"])
 @login_required
 def api_library_novel(novel_id):
     table = db.get_user_table(current_user)
@@ -145,6 +145,28 @@ def api_library_novel(novel_id):
             {
                 "success": True,
                 "data": dict(row),
+            }
+        )
+    if request.method == "DELETE":
+        try:
+            db.delete_novels(novel_id, table=table)
+        except Exception as e:
+            current_app.logger.error(
+                f"Failed to delete novel with ID {novel_id}: {e!s}"
+            )
+            return jsonify(
+                {
+                    "success": False,
+                    "message": f"Failed to delete novel with ID {novel_id}. {e!s}",
+                    "category": "error",
+                }
+            ), 500
+
+        return jsonify(
+            {
+                "success": True,
+                "message": f"Novel with ID {novel_id} deleted.",
+                "category": "success",
             }
         )
 
@@ -167,7 +189,7 @@ def api_library_novel(novel_id):
         db.update_novel(novel_id, updates, table=table)
 
     except Exception as e:
-        print(f"Failed to update novel with ID {novel_id}: {e!s}")
+        current_app.logger.error(f"Failed to update novel with ID {novel_id}: {e!s}")
         return jsonify(
             {
                 "success": False,
@@ -188,87 +210,83 @@ def api_library_novel(novel_id):
     )
 
 
-@main_bp.route("/api/v1/settings")
-@login_required
-def api_settings():
-    settings = db.get_settings_dict()
-
-    metadata = {
-        key: {
-            "key": key,
-            **definition,
-        }
-        for key, definition in SETTING_METADATA.items()
-    }
-
-    return jsonify(
-        {
-            "data": settings,
-            "metadata": metadata,
-        }
-    )
-
-
-@main_bp.route("/api/v1/settings", methods=["POST"])
+@main_bp.route("/api/v1/settings", methods=["POST", "GET"])
 @login_required
 def api_save_setting():
-    payload = request.get_json(silent=True) or {}
 
-    key = payload.get("key")
-    value = payload.get("value")
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or {}
 
-    if not key:
+        key = payload.get("key")
+        value = payload.get("value")
+
+        if not key:
+            return jsonify(
+                {
+                    "success": False,
+                    "message": "Setting key is required.",
+                    "category": "warning",
+                }
+            ), 400
+
+        metadata = SETTING_METADATA.get(key)
+
+        if metadata is None:
+            return jsonify(
+                {
+                    "success": False,
+                    "message": f"Unknown setting: {key}.",
+                    "category": "warning",
+                }
+            ), 400
+
+        if metadata.get("readonly"):
+            return jsonify(
+                {
+                    "success": False,
+                    "message": f"Setting '{key}' is read-only.",
+                    "category": "warning",
+                }
+            ), 400
+
+        try:
+            normalized_value = db.normalize_setting_value(value, metadata)
+        except ValueError as exc:
+            return jsonify(
+                {
+                    "success": False,
+                    "message": str(exc),
+                    "category": "warning",
+                }
+            ), 400
+
+        db.save_setting(key, normalized_value)
+
         return jsonify(
             {
-                "success": False,
-                "message": "Setting key is required.",
-                "category": "warning",
+                "success": True,
+                "message": "Setting saved.",
+                "category": "success",
+                "data": {
+                    key: db.get_value(key),
+                },
             }
-        ), 400
+        )
+    if request.method == "GET":
+        settings = db.get_settings_dict()
 
-    metadata = SETTING_METADATA.get(key)
-
-    if metadata is None:
-        return jsonify(
-            {
-                "success": False,
-                "message": f"Unknown setting: {key}.",
-                "category": "warning",
-            }
-        ), 400
-
-    if metadata.get("readonly"):
-        return jsonify(
-            {
-                "success": False,
-                "message": f"Setting '{key}' is read-only.",
-                "category": "warning",
-            }
-        ), 400
-
-    try:
-        normalized_value = db.normalize_setting_value(value, metadata)
-    except ValueError as exc:
-        return jsonify(
-            {
-                "success": False,
-                "message": str(exc),
-                "category": "warning",
-            }
-        ), 400
-
-    db.save_setting(key, normalized_value)
-
-    return jsonify(
-        {
-            "success": True,
-            "message": "Setting saved.",
-            "category": "success",
-            "data": {
-                key: db.get_value(key),
-            },
+        metadata = {
+            key: {"key": key, **definition}
+            for key, definition in SETTING_METADATA.items()
         }
-    )
+
+        return jsonify(
+            {
+                "data": settings,
+                "metadata": metadata,
+            }
+        )
+    return jsonify(), 405
 
 
 @main_bp.route("/api/v1/sync/registry")
@@ -320,7 +338,7 @@ def api_sync():
         ), 400
 
     except Exception as exc:  # noqa: BLE001
-        print(f"Failed to start synchronization: {exc}")
+        current_app.logger.error(f"Failed to start synchronization: {exc}")
 
         return jsonify(
             {
@@ -416,7 +434,19 @@ def api_sync_events(job_id):
                 yield (f"event: done\ndata: {json.dumps(execution.snapshot())}\n\n")
                 break
 
-            yield (f"event: {event.type}\ndata: {json.dumps(event.data)}\n\n")
+            try:
+                data = json.dumps(event.data)
+            except (TypeError, ValueError):
+                current_app.logger.exception(
+                    "Failed to serialize synchronization event '%s'.", event.type
+                )
+
+                yield (
+                    "event: error\ndata: {json.dumps({'message': 'Failed to serialize synchronization event.', 'event': event.type})}\n\n"
+                )
+                break
+
+            yield f"event: {event.type}\ndata: {data}\n\n"
 
     return Response(
         stream_with_context(event_stream()),

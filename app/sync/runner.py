@@ -23,6 +23,7 @@ from app.utils import db
 
 from .engine import SyncEngine
 from .events import SyncEvent
+from .execution import SyncCancelled
 from .logger import SyncLogger  # type: ignore
 from .selector import BulkSelector
 
@@ -70,7 +71,10 @@ class SyncRunner:
             )
 
             try:
-                result = self.engine.run(job, novel)
+                result = self.engine.run(job, novel, is_cancelled=is_cancelled)
+            except SyncCancelled:
+                self.logger.info(f"{novel['name']}: Synchronization cancelled")
+                break
 
             except Exception as e:  # noqa: BLE001
                 self.logger.error(f"{novel['name']}: {e}")
