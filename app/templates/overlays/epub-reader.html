@@ -1,0 +1,58 @@
+<!-- EPUB Reader Modal -->
+<div class="modal modal-blur fade" id="epub-reader-modal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <!-- Header -->
+      <div class="modal-header border-bottom pe-4 epub-modal-header">
+        <div class="d-flex align-items-center gap-1 epub-info">
+          <button
+            type="button"
+            class="btn btn-ghost-primary btn-icon icon icon-pulse flex-shrink-0"
+            id="epub-toc-toggle"
+            aria-expanded="false"
+            aria-controls="epub-toc-panel"
+            aria-label="Table of contents">
+            <i class="ti ti-book-2"></i>
+          </button>
+
+          <div>
+            <h3 class="modal-title mb-0 text-truncate" id="epub-book-title">The Great Book</h3>
+            <div class="text-secondary small text-truncate" id="epub-book-author">Author Name</div>
+          </div>
+        </div>
+
+        <span id="current-chapter" class="epub-chapter fw-medium text-truncate"></span>
+
+        <div class="d-flex align-items-center gap-2 epub-close">
+          <button type="button" class="btn-close btn btn-outline-danger" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+      </div>
+
+      <!-- Main Reader -->
+      <div class="flex-fill overflow-hidden">
+        <div class="row g-0 h-100">
+          <!-- Backdrop, click to close -->
+          <div id="epub-toc-backdrop"></div>
+
+          <!-- Table of Contents (floating) -->
+          <aside class="d-flex flex-column border-end" id="epub-toc-panel" aria-hidden="true">
+            <div class="p-3 border-bottom">
+              <div class="text-secondary text-uppercase small fw-bold">Contents</div>
+            </div>
+
+            <div class="list-group list-group-flush overflow-auto small" id="epub-toc"></div>
+          </aside>
+
+          <!-- Reader -->
+          <main class="col h-100 position-relative">
+            <!-- Reader Container -->
+            <div class="h-100 overflow-auto p-1" id="epub-reader-container">
+              <!-- EPUB.js renders here -->
+              <div id="epub-viewer"></div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

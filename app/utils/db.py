@@ -429,14 +429,14 @@ def delete_novels(ids, table=DEFAULT_TABLE):
     execute(f"DELETE FROM {table} WHERE id IN ({ids})", commit=True, close=True)
 
 
-def get_novel(novel_id, table=DEFAULT_TABLE):
+def get_novel(novel_id, table=DEFAULT_TABLE, column="*", row_factory=True):
     """
     Return one novel by ID.
     """
     return fetch_one(
-        f"SELECT * FROM {table} WHERE id=?",
+        f"SELECT {column} FROM {table} WHERE id=?",
         (novel_id,),
-        row_factory=True,
+        row_factory=row_factory,
     )
 
 

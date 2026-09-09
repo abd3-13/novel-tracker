@@ -6,13 +6,15 @@ from flask import (
     Response,
     current_app,
     jsonify,
+    make_response,
     render_template,
     request,
+    send_from_directory,
     stream_with_context,
 )
 from flask_login import current_user, login_required
 
-from app.constants import SETTING_METADATA
+from app.constants import SETTING_METADATA, DatabaseColumn
 from app.sync.job import SyncJob
 from app.sync.metadata import FIELDS
 from app.utils import db
@@ -457,3 +459,44 @@ def api_sync_events(job_id):
             "Connection": "keep-alive",
         },
     )
+
+
+@main_bp.route("/api/v1/epub/<int:novelID>")
+@login_required
+def serve_epub(novelID):
+    epub_dir = db.get_value("LOCAL_EPUB_DIR") or "./"
+
+    filename = db.get_novel(
+        novelID,
+        db.get_user_table(current_user),
+        DatabaseColumn.FILEPATH.value,
+        row_factory=False,
+    )
+
+    if isinstance(filename, (tuple, list)):
+        filename = filename[0] if filename else None
+
+    if not filename:
+        return jsonify(
+            {
+                "success": False,
+                "message": "EPUB file is not configured for this novel.",
+                "category": "warning",
+            }
+        ), 404
+
+    try:
+        response = make_response(send_from_directory(epub_dir, filename))
+    except FileNotFoundError:
+        return jsonify(
+            {
+                "success": False,
+                "message": "EPUB file was not found.",
+                "category": "warning",
+            }
+        ), 404
+
+    response.headers["Content-Type"] = "application/epub+zip"
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+
+    return response

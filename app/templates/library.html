@@ -32,12 +32,9 @@
       </div>
     </div>
     <div id="library-overlays">
-      {% include "overlays/sync.html" %} {% include "overlays/filter.html" %} {% include "overlays/settings.html" %}
+      {% include "overlays/sync.html" %} {% include "overlays/filter.html" %} {% include "overlays/settings.html" %} {% include "overlays/epub-reader.html" %}
     </div>
-    <div
-      id="notification-container"
-      class="position-fixed bottom-0 end-0 p-3"
-      style="z-index: 1080; width: 380px"></div>
+    <div id="notification-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080; width: 380px"></div>
     <script>
       window.flashMessages = {{ get_flashed_messages(with_categories=true) | tojson }};
       window.librarySettings = {{ settings | tojson }};
@@ -45,5 +42,7 @@
     </script>
     <script src="{{ url_for('static', filename='vendor/tabler/tabler.min.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/library/app.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='vendor/epubjs/jszip.min.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='vendor/epubjs/epub.js') }}"></script>
   </body>
 </html>

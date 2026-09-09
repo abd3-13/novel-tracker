@@ -338,3 +338,183 @@
   background: var(--tblr-bg-surface);
   border-top: 1px solid var(--tblr-border-color);
 }
+
+/* ============================================
+   EPUB READER MODAL
+   75% of the visible browser window
+   ============================================ */
+
+/* =========================================
+   EPUB READER - 75% VIEWPORT
+   ========================================= */
+
+#epub-reader-modal .modal-dialog {
+  width: 75vw !important;
+  max-width: 75vw !important;
+
+  height: 75vh !important;
+}
+
+#epub-reader-modal .modal-content {
+  height: 75vh !important;
+  max-height: 75vh !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  overflow: hidden !important;
+}
+
+/* Header */
+#epub-reader-modal .modal-header {
+  flex-shrink: 0 !important;
+}
+
+/* Main reader */
+#epub-reader-modal > .modal-dialog > .modal-content > .flex-fill {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Reader row */
+#epub-reader-modal .flex-fill > .row {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+/* TOC */
+#epub-reader-modal #epub-toc-panel {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+/* TOC scrolling */
+#epub-reader-modal #epub-toc {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+}
+
+/* Reader main */
+#epub-reader-modal main {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+/* Reader container */
+#epub-reader-modal #epub-reader-container {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: auto !important;
+}
+
+/* EPUB.js */
+#epub-reader-modal #epub-viewer {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Footer */
+#epub-reader-modal .modal-footer {
+  flex-shrink: 0 !important;
+}
+
+/* =========================================
+   MOBILE
+   ========================================= */
+
+@media (max-width: 767.98px) {
+  #epub-reader-modal .modal-dialog {
+    width: 95vw !important;
+    max-width: 95vw !important;
+
+    height: 90vh !important;
+
+    margin-top: 5vh !important;
+    margin-bottom: 5vh !important;
+  }
+
+  #epub-reader-modal .modal-content {
+    height: 90vh !important;
+    max-height: 90vh !important;
+  }
+}
+
+.epub-modal-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas: 'info chapter close';
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.epub-modal-header .epub-info {
+  grid-area: info;
+  min-width: 0; /* flex/grid children default to min-width:auto, which blocks truncation */
+}
+
+.epub-modal-header .epub-info > div {
+  min-width: 0;
+}
+
+.epub-modal-header .epub-chapter {
+  grid-area: chapter;
+  justify-self: center;
+  max-width: 100%;
+}
+
+.epub-modal-header .epub-close {
+  grid-area: close;
+  justify-self: end;
+}
+
+/* Below sm breakpoint: three columns get too cramped no matter how much
+     we truncate, so drop to two rows — title+close on top, chapter below. */
+@media (max-width: 575.98px) {
+  .epub-modal-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'info close'
+      'chapter chapter';
+    row-gap: 0.25rem;
+  }
+
+  .epub-modal-header .epub-chapter {
+    justify-self: center;
+    max-width: 100%;
+  }
+}
+
+#epub-toc-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 280px;
+  max-width: 85vw;
+  z-index: 1030;
+  background: var(--tblr-modal-bg, var(--tblr-bg-surface, #fff));
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
+}
+
+#epub-toc-panel.show {
+  transform: translateX(0);
+}
+
+#epub-toc-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1020;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+#epub-toc-backdrop.show {
+  opacity: 1;
+  pointer-events: auto;
+}

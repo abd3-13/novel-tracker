@@ -52,6 +52,14 @@ export async function deleteNovel(novelId) {
   return result;
 }
 
+export async function fetchEPUB(novelId) {
+  const response = await fetch(`/api/v1/epub/${novelId}`);
+
+  if (!response.ok) throw new Error(result.message || `Failed to load EPUB file : ${novelId}.`);
+
+  return response;
+}
+
 export async function fetchSyncMetadata() {
   const response = await fetch('/api/v1/sync/registry');
 

@@ -7,6 +7,7 @@ import { openNovelSync } from './sync.js';
 import { escapeHtml } from './../utils.js';
 import { deleteNovel } from './../api.js';
 import { openNovelEdit } from './edit.js';
+import { openNovelReader } from './../views/epub_reader.js';
 
 function renderMeta(icon, value, title = '') {
   if (value === null || value === undefined || value === '' || value === 0 || value === '0' || value === '0/0') return '';
@@ -109,9 +110,11 @@ function showDeleteNovelDialog(novel) {
 
       window.showLibraryNotification?.(result.message || 'Novel deleted successfully.', 'success');
 
-      document.dispatchEvent(new CustomEvent('library:novel-deleted', {
-        detail: { id: novel.id }
-      }));
+      document.dispatchEvent(
+        new CustomEvent('library:novel-deleted', {
+          detail: { id: novel.id }
+        })
+      );
     } catch (error) {
       button.disabled = false;
       button.innerHTML = '<i class="ti ti-trash me-1"></i>Delete';
@@ -234,7 +237,7 @@ function showNovelLinksDialog(novel) {
 // --- Card actions (event delegation) ------------------------------------
 
 const CARD_ACTION_HANDLERS = {
-  read: novel => window.showLibraryNotification?.('EPUB reader is not available yet.', 'info'),
+  read: novel => openNovelReader(novel.id),
   sync: novel => openNovelSync(novel.id),
   edit: novel => openNovelEdit(novel.id),
   delete: novel => showDeleteNovelDialog(novel),
@@ -326,7 +329,7 @@ export function renderNovelCard(novel) {
             <div class="novel-card-description">${description}</div>
             ${renderTags(novel.tags)}
             <div class="novel-card-actions">
-              ${novel.permissions?.can_read ? renderAction('book-2', 'Read', 'read') : ''}
+              ${novel.permissions?.can_read ? renderAction('book-2', 'Read', 'read', '', 'data-bs-toggle="modal" data-bs-target="#epub-reader-modal"') : ''}
               ${renderAction('refresh', 'Sync', 'sync', '', 'data-bs-toggle="offcanvas" data-bs-target="#sync-offcanvas"')}
               ${novel.permissions?.can_edit ? renderAction('edit', 'Edit', 'edit') : ''}
               ${novel.permissions?.can_delete ? renderAction('trash', 'Delete', 'delete', 'text-danger') : ''}
