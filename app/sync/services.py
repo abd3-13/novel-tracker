@@ -469,6 +469,11 @@ def get_moonreader_progress(
     filename = normalize_filename(epub_filename)
 
     progress = _load_progress(xml_path)
+    print(
+        f"Moon+ Reader Progress cache: {len(progress)} entries loaded from {xml_path}"
+    )
+    print(f"Full progress cache: {progress}")
+    print(f"Looking up progress for filename: {filename}")
 
     result = progress.get(filename)
 
