@@ -125,17 +125,18 @@ async function loadEPUB(novelID) {
      * map so relocation updates are O(1) instead of re-scanning the DOM.
      * Uses event delegation instead of one listener per item.
      */
-    epubBook.loaded.navigation.then(toc => {
-      if (myToken !== loadToken) return;
 
-      log('EPUB navigation has been loaded now');
+    const toc = await epubBook.loaded.navigation;
 
-      epubTOC = toc;
+    if (myToken !== loadToken) return;
 
-      const tocContainer = document.getElementById('epub-toc');
+    log('EPUB navigation has been loaded now');
 
-      if (!tocContainer) { return; }
+    epubTOC = toc;
 
+    const tocContainer = document.getElementById('epub-toc');
+
+    if (tocContainer) {
       tocContainer.innerHTML = '';
       tocByHref = new Map();
 
@@ -160,23 +161,26 @@ async function loadEPUB(novelID) {
           fragment.appendChild(button);
           tocByHref.set(normalizeHref(item.href), { item, button });
 
-          if (Array.isArray(item.subitems) && item.subitems.length > 0) { renderItems(item.subitems, depth + 1); }
+          if (Array.isArray(item.subitems) && item.subitems.length > 0) {
+            renderItems(item.subitems, depth + 1);
+          }
         });
       };
 
       renderItems(toc, 0);
       tocContainer.appendChild(fragment);
-    });
+    }
 
     // Single delegated click handler for the whole TOC.
-    const tocContainer = document.getElementById('epub-toc');
     if (tocContainer && !tocContainer.dataset.delegated) {
       tocContainer.addEventListener('click', event => {
         const button = event.target.closest('button[data-href]');
+
         if (!button || !epubRendition) return;
 
         epubRendition.display(button.dataset.href);
       });
+
       tocContainer.dataset.delegated = 'true';
     }
 
@@ -186,20 +190,36 @@ async function loadEPUB(novelID) {
      * 1. Current chapter text
      * 2. Active TOC button
      */
-    epubRendition.on('relocated', location => { updateCurrentChapter(location); });
+    epubRendition.on('relocated', location => {
+      updateCurrentChapter(location);
+    });
 
     /*
-     * Display epub based on the settings
+     * Display EPUB based on the reader setting.
+     *
+     * EPUB_READER_FROM:
+     *
+     * "1" -> beginning of the EPUB
+     * "0" -> last chapter in the EPUB
      */
-    if (settings) {
-      const epubFromStart = settings.EPUB_READER_FROM || "";
-      if (epubFromStart === "0") {
-        console.log("EPUB will open from current progress");
-        await epubRendition.display();
+    const epubFromStart = settings.EPUB_READER_FROM || "1";
+
+    if (epubFromStart === "0") {
+      const lastChapter = getLastTOCItem(epubTOC.toc);
+
+      if (lastChapter?.href) {
+        console.log('EPUB will open at the last chapter:', lastChapter.label);
+        await epubRendition.display(lastChapter.href);
       } else {
+        console.warn('Could not determine the last EPUB chapter; opening from the beginning.');
         await epubRendition.display();
       }
+    } else {
+      console.log('EPUB will open from the beginning');
+      await epubRendition.display();
     }
+
+
     
 
     if (myToken !== loadToken) return;
@@ -254,6 +274,27 @@ function applyReaderTheme() {
     img: { display: 'none' }
   });
 }
+
+/**
+ * Returns the last navigable item in the EPUB TOC.
+ *
+ * If the final TOC item contains nested subitems, the deepest
+ * final item is considered the last chapter.
+ */
+function getLastTOCItem(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return null;
+  }
+
+  const lastItem = items[items.length - 1];
+
+  if (Array.isArray(lastItem.subitems) && lastItem.subitems.length > 0) {
+    return getLastTOCItem(lastItem.subitems);
+  }
+
+  return lastItem;
+}
+
 
 /**
  * epub.js resolves package metadata (OPF <metadata>) via book.loaded.metadata.

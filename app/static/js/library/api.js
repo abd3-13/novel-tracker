@@ -1,27 +1,37 @@
 // static/js/library/api.js
 
-function checkServer() {
-    const status = document.querySelector("#tile_server_stat .status");
-    fetch("/status", { cache: "no-store" })
-        .then(response => {
-            if (!response.ok) throw new Error("Server down");
+async function checkServer() {
+  const status = document.querySelector("#tile_server_stat .status");
 
-            // Server is reachable
-            status.classList.remove("status-red");
-            status.classList.add("status-green");
-            status.title = "Backend Server is reachable";
-        })
-        .catch(() => {
-            // Server is not reachable
-            status.classList.remove("status-green");
-            status.classList.add("status-red");
-            status.title = "Backend Server is UNreachable";
-        });
+  if (!status) return;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1500);
+
+  try {
+    const response = await fetch("/status", {
+      cache: "no-store",
+      signal: controller.signal
+    });
+
+    if (!response.ok) throw new Error("Server down");
+
+    status.classList.remove("status-red");
+    status.classList.add("status-green");
+    status.title = "Backend Server is reachable";
+  } catch {
+    status.classList.remove("status-green");
+    status.classList.add("status-red");
+    status.title = "Backend Server is UNreachable";
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
-// Check every 5 seconds
-setInterval(checkServer, 5000);
-
+export function initServerStatus() {
+  checkServer();
+  setInterval(checkServer, 2000);
+}
 
 export async function fetchNovels() {
   const response = await fetch('/api/v1/library');

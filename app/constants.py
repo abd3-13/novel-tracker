@@ -311,7 +311,7 @@ SETTING_METADATA = {
     },
     SettingKey.EPUB_READER_FROM: {
         "label": "EPUB open from start?",
-        "description": "From where the epub should be opened, No will open the epub from progressed chapter.",
+        "description": "From where the epub should be opened, 'No' will open the epub from the last chapter.",
         "type": "boolean",
         "group": "Library",
         "icon": "book-2",

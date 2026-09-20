@@ -1,4 +1,4 @@
-import { fetchNovels } from './api.js';
+import { fetchNovels, initServerStatus } from './api.js';
 import { library } from './state.js';
 import { applySearch } from './utils.js';
 import { renderGrid } from './views/grid.js';
@@ -23,6 +23,7 @@ async function init() {
   library.novels = await fetchNovels();
 
   renderLibrary(); // Build the UI once
+  initServerStatus();
 }
 
 function calculateStats() {
