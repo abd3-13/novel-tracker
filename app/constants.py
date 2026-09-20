@@ -310,21 +310,11 @@ SETTING_METADATA = {
         ],
     },
     SettingKey.EPUB_READER_FROM: {
-        "label": "EPUB reader progress",
-        "description": "Select where reading progress should be obtained from.",
-        "type": "choice",
+        "label": "EPUB open from start?",
+        "description": "From where the epub should be opened, No will open the epub from progressed chapter.",
+        "type": "boolean",
         "group": "Library",
         "icon": "book-2",
-        "options": [
-            {
-                "value": "current",
-                "label": "Current reader",
-            },
-            {
-                "value": "moonreader",
-                "label": "Moon+ Reader",
-            },
-        ],
     },
     SettingKey.MOON_PROGRESS_FILE: {
         "label": "Moon+ Reader progress file",

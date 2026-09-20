@@ -115,6 +115,10 @@ def index():
         "library.html", settings=settings, settings_metadata=SETTING_METADATA
     )
 
+@main_bp.route('/status')
+def status():
+  return "", 200
+
 
 @main_bp.route("/api/v1/library")
 @login_required

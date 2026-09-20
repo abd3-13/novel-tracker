@@ -1,5 +1,9 @@
+import { fetchEPUB } from './../api.js';
+
 const DEBUG = false;
 const log = (...args) => DEBUG && console.log(...args);
+
+const settings = window.librarySettings || {};
 
 export function openNovelReader(novelID) {
   if (!ePub) {
@@ -89,47 +93,14 @@ async function loadEPUB(novelID) {
   `;
 
   try {
-    const epubURL = `/api/v1/epub/${novelID}`;
-
-    log('Loading EPUB:', epubURL);
-
-    const response = await fetch(epubURL, {
-      method: 'GET',
-      credentials: 'same-origin',
-      cache: 'no-store',
-      headers: {
-        Accept: 'application/epub+zip'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to load EPUB: HTTP ${response.status}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-
-    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
-      throw new Error('The EPUB response is empty.');
-    }
+    const arrayBuffer = await fetchEPUB(novelID);
 
     // A newer load started while we were fetching — abandon this one.
     if (myToken !== loadToken) return;
 
     log(`EPUB downloaded: ${arrayBuffer.byteLength} bytes`);
 
-    if (epubRendition) {
-      try {
-        epubRendition.destroy();
-      } catch (e) {
-        console.warn('Could not destroy previous rendition:', e);
-      }
-
-      epubRendition = null;
-    }
-
-    epubBook = null;
-    epubTOC = [];
-    tocByHref = new Map();
+    if (epubRendition) { epubRendition.destroy();  epubRendition = null; }
 
     viewer.innerHTML = '';
 
@@ -141,17 +112,9 @@ async function loadEPUB(novelID) {
 
     log('EPUB parsed successfully:', epubBook);
 
-    epubBook.loaded.metadata.then(metadata => {
-      if (myToken !== loadToken) return;
-      updateBookMetadata(metadata);
-    });
+    epubBook.loaded.metadata.then(metadata => { if (myToken !== loadToken) return; updateBookMetadata(metadata); });
 
-    epubRendition = epubBook.renderTo(viewer, {
-      width: '100%',
-      height: '100%',
-      flow: 'scrolled',
-      allowScriptedContent: true
-    });
+    epubRendition = epubBook.renderTo(viewer, {width: '100%', height: '100%', flow: 'scrolled', allowScriptedContent: true});
 
     await epubBook.loaded;
 
@@ -171,9 +134,7 @@ async function loadEPUB(novelID) {
 
       const tocContainer = document.getElementById('epub-toc');
 
-      if (!tocContainer) {
-        return;
-      }
+      if (!tocContainer) { return; }
 
       tocContainer.innerHTML = '';
       tocByHref = new Map();
@@ -199,9 +160,7 @@ async function loadEPUB(novelID) {
           fragment.appendChild(button);
           tocByHref.set(normalizeHref(item.href), { item, button });
 
-          if (Array.isArray(item.subitems) && item.subitems.length > 0) {
-            renderItems(item.subitems, depth + 1);
-          }
+          if (Array.isArray(item.subitems) && item.subitems.length > 0) { renderItems(item.subitems, depth + 1); }
         });
       };
 
@@ -227,14 +186,21 @@ async function loadEPUB(novelID) {
      * 1. Current chapter text
      * 2. Active TOC button
      */
-    epubRendition.on('relocated', location => {
-      updateCurrentChapter(location);
-    });
+    epubRendition.on('relocated', location => { updateCurrentChapter(location); });
 
     /*
-     * Display the first location.
+     * Display epub based on the settings
      */
-    await epubRendition.display();
+    if (settings) {
+      const epubFromStart = settings.EPUB_READER_FROM || "";
+      if (epubFromStart === "0") {
+        console.log("EPUB will open from current progress");
+        await epubRendition.display();
+      } else {
+        await epubRendition.display();
+      }
+    }
+    
 
     if (myToken !== loadToken) return;
 

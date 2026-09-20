@@ -180,7 +180,7 @@ def init_db():
         SettingKey.SECRETS_KEY: "",
         SettingKey.LAST_BULK_TIME: "",
         SettingKey.UPDATE_LOCAL_ONLINE: "local",
-        SettingKey.EPUB_READER_FROM: "current",
+        SettingKey.EPUB_READER_FROM: "true",
         SettingKey.MOON_PROGRESS_FILE: "/data/data/com.flyersoft.moonreaderp/shared_prefs/positions10.xml",
         SettingKey.CHARAC_API: "https://idruid.webnovel.com/go/api/book-role",
     }

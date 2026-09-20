@@ -37,6 +37,7 @@ export const library = {
     total: 0,
     unread: 0,
     missingEpub: 0,
-    updates: 0
+    updates: 0,
+    filter: 0
   }
 };

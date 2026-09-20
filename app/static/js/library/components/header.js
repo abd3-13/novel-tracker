@@ -3,8 +3,8 @@ export function renderHeader(library) {
   document.getElementById('library-header').innerHTML = `
       <div class="row align-items-center">
         <div class="col">
-          <h2 class="page-title mb-1">Library</h2>
-          <div class="text-secondary"><span>${library.stats.total} Novels</span><span class="mx-2">•</span><span>${library.stats.updates} Updates</span><span class="mx-2">•</span><span>${library.stats.missingEpub} Missing EPUB</span></div>
+          <h2 class="page-title mb-1">Library<div id="tile_server_stat"><span class="status status-red"><span class="status-dot status-dot-animated"></span> Server</span></div></h2>
+          <div class="text-secondary"><span>${library.stats.total} Novels</span><span class="mx-2">•</span><span>${library.stats.filter} Filtered</span><span class="mx-2">•</span><span>${library.stats.updates} Updates</span><span class="mx-2">•</span><span>${library.stats.missingEpub} Missing EPUB</span></div>
         </div>
         <div class="col-auto">
           <div class="d-flex align-items-center gap-2">

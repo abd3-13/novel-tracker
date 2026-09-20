@@ -1,5 +1,28 @@
 // static/js/library/api.js
 
+function checkServer() {
+    const status = document.querySelector("#tile_server_stat .status");
+    fetch("/status", { cache: "no-store" })
+        .then(response => {
+            if (!response.ok) throw new Error("Server down");
+
+            // Server is reachable
+            status.classList.remove("status-red");
+            status.classList.add("status-green");
+            status.title = "Backend Server is reachable";
+        })
+        .catch(() => {
+            // Server is not reachable
+            status.classList.remove("status-green");
+            status.classList.add("status-red");
+            status.title = "Backend Server is UNreachable";
+        });
+}
+
+// Check every 5 seconds
+setInterval(checkServer, 5000);
+
+
 export async function fetchNovels() {
   const response = await fetch('/api/v1/library');
 
@@ -52,12 +75,29 @@ export async function deleteNovel(novelId) {
   return result;
 }
 
-export async function fetchEPUB(novelId) {
-  const response = await fetch(`/api/v1/epub/${novelId}`);
+export async function fetchEPUB(novelID) {
+   const epubURL = `/api/v1/epub/${novelID}`;
 
-  if (!response.ok) throw new Error(result.message || `Failed to load EPUB file : ${novelId}.`);
+    const response = await fetch(epubURL, {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/epub+zip'
+      }
+    });
 
-  return response;
+    if (!response.ok) {
+      throw new Error(`Failed to load EPUB: HTTP ${response.status}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+
+    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+      throw new Error('The EPUB response is empty.');
+    }
+
+  return arrayBuffer;
 }
 
 export async function fetchSyncMetadata() {

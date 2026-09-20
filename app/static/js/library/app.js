@@ -33,6 +33,8 @@ function calculateStats() {
   library.stats.unread = library.novels.filter(n => n.reading.unread > 0).length;
 
   library.stats.missingEpub = library.novels.filter(n => !n.epub.exists).length;
+  
+  if (library.filters.length > 0 ) { library.stats.filter = library.visible.length; }
 }
 
 export function renderLibrary() {
