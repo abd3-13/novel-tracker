@@ -202,24 +202,23 @@ async function loadEPUB(novelID) {
      * "1" -> beginning of the EPUB
      * "0" -> last chapter in the EPUB
      */
-    const epubFromStart = settings.EPUB_READER_FROM || "1";
 
-    if (epubFromStart === "0") {
-      const lastChapter = getLastTOCItem(epubTOC.toc);
-
-      if (lastChapter?.href) {
-        console.log('EPUB will open at the last chapter:', lastChapter.label);
-        await epubRendition.display(lastChapter.href);
-      } else {
-        console.warn('Could not determine the last EPUB chapter; opening from the beginning.');
-        await epubRendition.display();
+    const epubFromStart = settings.EPUB_READER_FROM ?? "1";
+    const lastChapter = epubFromStart === "0" ? getLastTOCItem(epubTOC.toc) : null;
+    
+    if (!lastChapter?.href) {
+      if (epubFromStart === "0") {
+        console.warn("Could not determine the last EPUB chapter; opening from the beginning.");
       }
-    } else {
-      console.log('EPUB will open from the beginning');
+    
       await epubRendition.display();
+    } else {
+      try {
+        await epubRendition.display(lastChapter.href);
+      } catch {
+        await epubRendition.display(`Text/${lastChapter.href}`);
+      }
     }
-
-
     
 
     if (myToken !== loadToken) return;
