@@ -173,12 +173,16 @@ async function loadEPUB(novelID) {
 
     // Single delegated click handler for the whole TOC.
     if (tocContainer && !tocContainer.dataset.delegated) {
-      tocContainer.addEventListener('click', event => {
+      tocContainer.addEventListener('click', async event => {
         const button = event.target.closest('button[data-href]');
 
         if (!button || !epubRendition) return;
-
-        epubRendition.display(button.dataset.href);
+        
+        try {
+          await epubRendition.display(button.dataset.href);
+        } catch {
+          await epubRendition.display(`Text/${button.dataset.href}`);
+        }
       });
 
       tocContainer.dataset.delegated = 'true';
@@ -328,9 +332,14 @@ function updateCurrentChapter(location) {
     return;
   }
   log(location);
+  console.log("updateCurrentChapter : location");
+  console.log(location);
 
   const currentHref = normalizeHref(location.start.href);
+  console.log(`currentHref = ${currentHref}`)
   const entry = tocByHref.get(currentHref);
+  console.log(`entry = ${entry}`)
+  console.log(tocByHref)
 
   const currentChapter = document.getElementById('current-chapter');
   if (currentChapter && entry) {
