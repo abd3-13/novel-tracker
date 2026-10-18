@@ -332,14 +332,10 @@ function updateCurrentChapter(location) {
     return;
   }
   log(location);
-  console.log("updateCurrentChapter : location");
-  console.log(location);
 
   const currentHref = normalizeHref(location.start.href);
-  console.log(`currentHref = ${currentHref}`)
+
   const entry = tocByHref.get(currentHref);
-  console.log(`entry = ${entry}`)
-  console.log(tocByHref)
 
   const currentChapter = document.getElementById('current-chapter');
   if (currentChapter && entry) {
