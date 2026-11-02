@@ -8,6 +8,7 @@ import { escapeHtml } from './../utils.js';
 import { deleteNovel } from './../api.js';
 import { openNovelEdit } from './edit.js';
 import { openNovelReader } from './../views/epub_reader.js';
+import { getNovelCoverSrc } from './../../cover.js';
 
 function renderMeta(icon, value, title = '') {
   if (value === null || value === undefined || value === '' || value === 0 || value === '0' || value === '0/0') return '';
@@ -274,14 +275,14 @@ function bindContainerDelegation(container, getNovels) {
 
 // --- Card rendering ----------------------------------
 
-export function renderNovelCard(novel, overlayMetadata) {
+export function renderNovelCard(novel, overlayMetadata, coverMode) {
   const unread = novel.reading.unread;
 
   const status = STATUS_STYLE[novel.status] ?? STATUS_STYLE.Reading;
 
   const percent = novel.chapters.online > 0 ? Math.round((novel.chapters.local / novel.chapters.online) * 100) : 0;
 
-  const cover = 'cover.webp';
+  const cover = getNovelCoverSrc(novel, coverMode);
 
   // Reuse the caller's cached selection when provided (bulk rendering) so we
   // don't hit sessionStorage and rebuild a Set for every single card.
@@ -306,7 +307,7 @@ export function renderNovelCard(novel, overlayMetadata) {
 
       <div class="position-relative novel-cover">
 
-        <img src="static/img/cover/${cover}" class="novel-cover-img card-img-top rounded-1" onerror="this.onerror=null; this.src='static/img/cover/cover.webp';">
+        <img src="${escapeHtml(cover)}" class="novel-cover-img card-img-top rounded-1" onerror="this.onerror=null; this.src='static/img/cover/cover.webp';">
 
         ${unread > 0 ? `<span class="badge bg-red text-white position-absolute top-0 start-0 m-2">+${unread}</span>` : ''}
 

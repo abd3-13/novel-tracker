@@ -6,7 +6,6 @@ import { renderHeader } from './components/header.js';
 import { applyFilters, initFilterPanel, bindFilterPanel, updateFilterPanel } from './components/filters.js';
 import { renderToolbar, bindToolbar, updateSortButton } from './components/toolbar.js';
 import { applySort } from './components/sort.js';
-import { renderNovelCard } from './components/novel-card.js';
 import { initSyncPanel } from './components/sync.js';
 import { initSettingsPanel } from './components/settings.js';
 import { enableSelection } from './components/selection.js';

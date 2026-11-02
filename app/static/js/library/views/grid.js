@@ -2,6 +2,7 @@
 
 import { renderNovelCard, bindNovelCardActions } from '../components/novel-card.js';
 import { getSelectedOverlayMetadata } from '../components/settings.js';
+import { getCoverMode } from '../../cover.js';
 
 // Cards are rendered in batches across animation frames so a library with
 // thousands of novels paints the first screen immediately instead of
@@ -19,8 +20,10 @@ export function renderGrid(container, novels) {
 
   bindNovelCardActions(grid, novels);
 
-  // Resolve the overlay metadata once per render instead of once per card.
+  // Resolve the overlay metadata and cover preference once per render instead
+  // of once per card.
   const overlayMetadata = new Set(getSelectedOverlayMetadata());
+  const coverMode = getCoverMode();
 
   let index = 0;
 
@@ -33,7 +36,7 @@ export function renderGrid(container, novels) {
     if (index < end) {
       let html = '';
       for (; index < end; index += 1) {
-        html += renderNovelCard(novels[index], overlayMetadata);
+        html += renderNovelCard(novels[index], overlayMetadata, coverMode);
       }
       // One parse + one reflow per batch instead of one per card.
       grid.insertAdjacentHTML('beforeend', html);

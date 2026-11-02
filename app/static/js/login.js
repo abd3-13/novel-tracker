@@ -1,8 +1,15 @@
 import { showNotification } from './notifi.js';
 import { LOGIN_TEXT } from './library/config.js';
+import { getCoverMode, setCoverMode } from './cover.js';
 
 const form = document.getElementById('login-form');
 const button = form.querySelector("button[type='submit']");
+const coverModeSelect = document.getElementById('cover-mode');
+
+if (coverModeSelect) {
+  coverModeSelect.value = getCoverMode();
+  coverModeSelect.addEventListener('change', () => setCoverMode(coverModeSelect.value));
+}
 
 if (window.flashMessages) {
   window.flashMessages.forEach(([category, message]) => {
