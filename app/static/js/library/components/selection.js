@@ -6,6 +6,10 @@ function getVisibleNovelOrder(container) {
 }
 
 export function enableSelection(container, library) {
+  // Guard so repeated library refreshes don't stack duplicate click handlers.
+  if (container.dataset.ntSelectionBound === 'true') return;
+  container.dataset.ntSelectionBound = 'true';
+
   container.addEventListener('click', e => {
     if (!library.selectionMode) return;
 

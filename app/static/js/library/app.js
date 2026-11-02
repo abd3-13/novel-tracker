@@ -27,14 +27,22 @@ async function init() {
 }
 
 function calculateStats() {
+  // Single pass over the collection instead of four separate filter scans.
+  let updates = 0;
+  let unread = 0;
+  let missingEpub = 0;
+
+  for (const novel of library.novels) {
+    if (novel.chapters.diff > 0) updates += 1;
+    if (novel.reading.unread > 0) unread += 1;
+    if (!novel.epub.exists) missingEpub += 1;
+  }
+
   library.stats.total = library.novels.length;
+  library.stats.updates = updates;
+  library.stats.unread = unread;
+  library.stats.missingEpub = missingEpub;
 
-  library.stats.updates = library.novels.filter(n => n.chapters.diff > 0).length;
-
-  library.stats.unread = library.novels.filter(n => n.reading.unread > 0).length;
-
-  library.stats.missingEpub = library.novels.filter(n => !n.epub.exists).length;
-  
   if (library.filters.length > 0 ) { library.stats.filter = library.visible.length; }
 }
 

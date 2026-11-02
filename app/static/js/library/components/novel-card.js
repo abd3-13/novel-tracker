@@ -274,7 +274,7 @@ function bindContainerDelegation(container, getNovels) {
 
 // --- Card rendering ----------------------------------
 
-export function renderNovelCard(novel) {
+export function renderNovelCard(novel, overlayMetadata) {
   const unread = novel.reading.unread;
 
   const status = STATUS_STYLE[novel.status] ?? STATUS_STYLE.Reading;
@@ -283,7 +283,9 @@ export function renderNovelCard(novel) {
 
   const cover = 'cover.webp';
 
-  const selectedOverlayMetadata = new Set(getSelectedOverlayMetadata());
+  // Reuse the caller's cached selection when provided (bulk rendering) so we
+  // don't hit sessionStorage and rebuild a Set for every single card.
+  const selectedOverlayMetadata = overlayMetadata ?? new Set(getSelectedOverlayMetadata());
 
   const optionalMeta = CARD_METADATA.filter(metadata => metadata.overlay && selectedOverlayMetadata.has(metadata.id))
     .map(metadata => {
