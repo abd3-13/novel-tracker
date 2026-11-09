@@ -1,0 +1,193 @@
+"""Routes for scanning and importing local EPUB files."""
+
+import json
+from pathlib import Path
+
+from flask import (
+    Blueprint,
+    Response,
+    current_app,
+    jsonify,
+    request,
+    stream_with_context,
+)
+from flask_login import current_user, login_required
+
+from app.constants import AuthRole, Default
+from app.importer.importer import import_files
+from app.importer.scanner import iter_scan_library, scan_library
+from app.sync.services import get_epub_cover_bytes
+from app.utils import db
+
+import_bp = Blueprint("importing", __name__)
+
+
+def _import_table():
+    """Return the writable table for the current user, or None if not allowed."""
+    if current_user.role == AuthRole.DEMO:
+        return None
+
+    table = db.get_user_table(current_user)
+
+    if table == Default.DEMO_NOVEL_TABLE:
+        return None
+
+    return table
+
+
+def _forbidden():
+    return jsonify(
+        {
+            "success": False,
+            "message": "Import is not available for this account.",
+            "category": "warning",
+        }
+    ), 403
+
+
+@import_bp.post("/api/v1/import/scan")
+@login_required
+def api_import_scan():
+    table = _import_table()
+
+    if table is None:
+        return _forbidden()
+
+    try:
+        result = scan_library(table)
+    except ValueError as exc:
+        current_app.logger.warning(f"Import scan failed: {exc!s}")
+        return jsonify(
+            {
+                "success": False,
+                "message": str(exc),
+                "category": "warning",
+            }
+        ), 400
+    except Exception as exc:  # noqa: BLE001
+        current_app.logger.error(f"Failed to scan EPUB directory: {exc!s}")
+        return jsonify(
+            {
+                "success": False,
+                "message": "Failed to scan EPUB directory.",
+                "category": "error",
+            }
+        ), 500
+
+    return jsonify({"success": True, **result})
+
+
+@import_bp.get("/api/v1/import/scan/events")
+@login_required
+def api_import_scan_events():
+    table = _import_table()
+
+    if table is None:
+        return _forbidden()
+
+    def event_stream():
+        try:
+            for event, data in iter_scan_library(table):
+                yield f"event: {event}\ndata: {json.dumps(data)}\n\n"
+        except ValueError as exc:
+            current_app.logger.warning(f"Import scan failed: {exc!s}")
+            yield f"event: scan_error\ndata: {json.dumps({'message': str(exc)})}\n\n"
+        except Exception as exc:  # noqa: BLE001
+            current_app.logger.exception(f"Failed to scan EPUB directory: {exc!s}")
+            yield (
+                "event: scan_error\ndata: "
+                f"{json.dumps({'message': 'Failed to scan EPUB directory.'})}\n\n"
+            )
+
+    return Response(
+        stream_with_context(event_stream()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+@import_bp.post("/api/v1/import")
+@login_required
+def api_import_files():
+    table = _import_table()
+
+    if table is None:
+        return _forbidden()
+
+    payload = request.get_json(silent=True) or {}
+    filenames = payload.get("filenames")
+
+    if not isinstance(filenames, list) or not filenames:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Select at least one EPUB to import.",
+                "category": "warning",
+            }
+        ), 400
+
+    if not all(isinstance(name, str) and name for name in filenames):
+        return jsonify(
+            {
+                "success": False,
+                "message": "Invalid EPUB selection.",
+                "category": "warning",
+            }
+        ), 400
+
+    try:
+        result = import_files(filenames, table)
+    except ValueError as exc:
+        current_app.logger.warning(f"Import failed: {exc!s}")
+        return jsonify(
+            {
+                "success": False,
+                "message": str(exc),
+                "category": "warning",
+            }
+        ), 400
+    except Exception as exc:  # noqa: BLE001
+        current_app.logger.error(f"Failed to import EPUBs: {exc!s}")
+        return jsonify(
+            {
+                "success": False,
+                "message": "Failed to import EPUBs.",
+                "category": "error",
+            }
+        ), 500
+
+    return jsonify({"success": True, **result})
+
+
+@import_bp.get("/api/v1/import/cover")
+@login_required
+def api_import_cover():
+    if _import_table() is None:
+        return _forbidden()
+
+    filename = request.args.get("filename", "")
+
+    if Path(filename).name != filename or not filename.lower().endswith(".epub"):
+        return "", 400
+
+    try:
+        cover = get_epub_cover_bytes(filename)
+    except FileNotFoundError:
+        return "", 404
+    except Exception as exc:  # noqa: BLE001
+        current_app.logger.error(f"Failed to read EPUB cover: {exc!s}")
+        return "", 404
+
+    if cover is None:
+        return "", 404
+
+    data, media_type = cover
+
+    response = Response(data, mimetype=media_type)
+    response.headers["Cache-Control"] = "no-store"
+
+    return response

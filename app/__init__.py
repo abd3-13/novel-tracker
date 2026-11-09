@@ -4,6 +4,7 @@ from flask import Flask
 from flask_login import LoginManager
 
 from app.auth import auth_bp, load_user
+from app.routes.importing import import_bp
 from app.routes.main import main_bp
 from app.sync.manager import SyncManager
 from app.utils.filters import time_difference
@@ -22,6 +23,7 @@ def create_app():
     # Register blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
+    app.register_blueprint(import_bp)
 
     # Register template filters
     app.add_template_filter(time_difference, name="time_difference")

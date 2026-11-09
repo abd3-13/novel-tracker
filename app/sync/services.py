@@ -154,14 +154,19 @@ class EpubMetadata:
     characters: int = 0
 
 
-def _metadata_from_book(book) -> EpubMetadata:
+def _metadata_from_book(book, strict: bool = True) -> EpubMetadata:
     """Build EpubMetadata from an already-loaded ebooklib Book object (no re-read)."""
 
     def first(ns: str, key: str) -> str:
         vals = book.get_metadata(ns, key)
         return vals[0][0].strip() if vals else ""
 
-    chap, last_title, last_file = extract_local_chap(book)
+    try:
+        chap, last_title, last_file = extract_local_chap(book)
+    except ValueError:
+        if strict:
+            raise
+        chap, last_title, last_file = 0, "", ""
 
     meta = EpubMetadata(
         url=first(MetadataNamespace.DC, "source"),
@@ -209,10 +214,26 @@ def _metadata_from_book(book) -> EpubMetadata:
     return meta
 
 
-def get_epub_metadata(epub_path: str) -> EpubMetadata:
+def get_epub_metadata(epub_path: str, strict: bool = True) -> EpubMetadata:
     """Read an EPUB file from disk and extract its metadata."""
     book = _read_epub(epub_path)
-    return _metadata_from_book(book)
+    return _metadata_from_book(book, strict=strict)
+
+
+def get_epub_cover_bytes(filename: str) -> tuple[bytes, str] | None:
+    """
+    Return the cover image bytes and media type for an EPUB in the configured
+    EPUB directory, without writing anything to disk.
+    """
+    book = _read_epub(filename)
+    cover_item = _cover_item(book)
+
+    if cover_item is None:
+        return None
+
+    media_type = getattr(cover_item, "media_type", "") or "image/jpeg"
+
+    return cover_item.get_content(), media_type
 
 
 def extract_epub_cover(
@@ -325,32 +346,42 @@ def count_local_characters(book) -> int:
     return sum(1 for i in book.get_items() if i.get_name().lower().endswith("_chr.jpg"))
 
 
-def import_epub_service(filename: str) -> dict:
-    """Process an EPUB file into a novel dict ready for DB insertion."""
+def build_novel_from_metadata(
+    meta: EpubMetadata,
+    filename: str,
+    title: str | None = None,
+    cover: str | None = None,
+) -> dict:
+    """Build a novel dict ready for DB insertion from extracted EPUB metadata."""
     novel = db.build_base_novel()
-    meta = get_epub_metadata(filename)
     novel.update(
         {
             MetadataKey.FILEPATH: filename,
-            MetadataKey.TITLE: meta.title or DefaultValue.UNKNOWN_TITLE,
-            MetadataKey.URL: meta.url,
+            MetadataKey.TITLE: title or meta.title or DefaultValue.UNKNOWN_TITLE,
+            MetadataKey.URL: meta.url or None,
             MetadataKey.SOURCE: meta.source or Provider.LOCAL,
-            MetadataKey.AUTHOR: meta.author,
-            MetadataKey.DESCRIPTION: meta.description,
-            MetadataKey.COVER: meta.cover_id,
+            MetadataKey.AUTHOR: meta.author or None,
+            MetadataKey.DESCRIPTION: meta.description or None,
+            MetadataKey.COVER: (cover if cover is not None else meta.cover_id) or None,
             MetadataKey.LOCAL_CHAPTERS: meta.chapters,
-            MetadataKey.LOCAL_LAST_TITLE: meta.last_title,
-            MetadataKey.LOCAL_LAST_FILE: meta.last_file,
+            MetadataKey.LOCAL_LAST_TITLE: meta.last_title or None,
+            MetadataKey.LOCAL_LAST_FILE: meta.last_file or None,
             MetadataKey.CHARACTERS: meta.characters,
+            MetadataKey.ONLINE_CHAPTERS: 0,
+            MetadataKey.ONLINE_CHARACTERS: 0,
+            MetadataKey.PROGRESS: 0,
+            MetadataKey.EPUB_EXISTS: True,
+            "notes": "",
+            "tags": "",
         }
     )
-
-    # TODO: add online metadata fetch if "sync from" setting is "online"
-    # book_id = meta.cover_id.suffix(".webp")
-    # if book_id and db.get_value("UPDATE_LOCAL_ONLINE") == "online":
-    #    logger.info("Online enrichment requested for book_id=%s (not yet implemented)", book_id)
-
     return novel
+
+
+def import_epub_service(filename: str) -> dict:
+    """Process an EPUB file into a novel dict ready for DB insertion."""
+    meta = get_epub_metadata(filename, strict=False)
+    return build_novel_from_metadata(meta, filename)
 
 
 def find_missing_epubs() -> list:
