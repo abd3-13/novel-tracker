@@ -8,6 +8,7 @@ import { renderToolbar, bindToolbar, updateSortButton } from './components/toolb
 import { applySort } from './components/sort.js';
 import { initSyncPanel } from './components/sync.js';
 import { initSettingsPanel } from './components/settings.js';
+import { initImportPanel } from './components/import.js';
 import { enableSelection } from './components/selection.js';
 import { showNotification } from './../notifi.js';
 
@@ -54,6 +55,7 @@ export function renderLibrary() {
 
   initSyncPanel(library);
   initSettingsPanel();
+  initImportPanel();
 
   bindToolbar(
     search => {

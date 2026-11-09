@@ -200,6 +200,85 @@ export function listenSyncProgress(jobId, handlers = {}) {
   return source;
 }
 
+export function listenImportScan(handlers = {}) {
+  const source = new EventSource('/api/v1/import/scan/events');
+
+  let completed = false;
+
+  source.addEventListener('progress', event => {
+    handlers.progress?.(JSON.parse(event.data));
+  });
+
+  source.addEventListener('done', event => {
+    completed = true;
+
+    handlers.done?.(JSON.parse(event.data));
+
+    source.close();
+  });
+
+  source.addEventListener('scan_error', event => {
+    completed = true;
+
+    const data = JSON.parse(event.data);
+
+    handlers.error?.(new Error(data.message || 'Failed to scan the EPUB directory.'));
+
+    source.close();
+  });
+
+  source.onerror = error => {
+    if (completed) {
+      // Expected because the stream has been closed.
+      return;
+    }
+
+    console.error('Import scan event stream error:', error);
+
+    handlers.error?.(new Error('Lost connection to the scan.'));
+
+    source.close();
+  };
+
+  return source;
+}
+
+export async function scanImport() {
+  const response = await fetch('/api/v1/import/scan', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({})
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || `Failed to scan EPUBs (${response.status}).`);
+  }
+
+  return result;
+}
+
+export async function importEpubs(filenames) {
+  const response = await fetch('/api/v1/import', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ filenames })
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || `Failed to import EPUBs (${response.status}).`);
+  }
+
+  return result;
+}
+
 export async function saveSetting(key, value) {
   const response = await fetch('/api/v1/settings', {
     method: 'POST',

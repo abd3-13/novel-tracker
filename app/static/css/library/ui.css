@@ -518,3 +518,63 @@
   opacity: 1;
   pointer-events: auto;
 }
+
+/* ==========================================================================
+   Import EPUBs
+   ========================================================================== */
+
+.import-cover {
+  width: 42px;
+  height: 58px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  background: var(--tblr-bg-surface-secondary);
+}
+
+#import-offcanvas .min-width-0 {
+  min-width: 0;
+}
+
+.import-scan-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  font-size: 2rem;
+  color: var(--tblr-primary);
+  background: var(--tblr-primary-lt);
+  animation: import-scan-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes import-scan-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(var(--tblr-primary-rgb), 0.35);
+  }
+
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 0.6rem rgba(var(--tblr-primary-rgb), 0);
+  }
+}
+
+#import-scan-progress {
+  transition: width 0.25s ease;
+}
+
+.import-scan-current {
+  font-family: var(--tblr-font-monospace);
+  font-size: 0.8rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--tblr-border-radius-sm);
+  background: var(--tblr-bg-surface-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .import-scan-icon {
+    animation: none;
+  }
+}

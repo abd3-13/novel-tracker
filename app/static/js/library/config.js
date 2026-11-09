@@ -76,9 +76,25 @@ export const TOOLBAR_TEXT = {
   searchPlaceholder: 'Search novels...(title, description, tags, author, notes)',
   sort: 'Sort',
   filter: 'Filter',
+  import: 'Import',
   synchronize: 'Synchronize',
   select: 'Select',
   searchIcon: 'Search'
+};
+
+export const IMPORT_TEXT = {
+  scanning: 'Scanning EPUBs...',
+  scanFailed: 'Failed to scan the EPUB directory.',
+  importFailed: 'Failed to import the selected EPUBs.',
+  noNew: 'No new EPUBs found in the source directory.',
+  imported: 'Imported',
+  skipped: 'Skipped',
+  failed: 'Failed',
+  new: 'New',
+  alreadyExists: 'Already exists',
+  error: 'Error',
+  importAll: 'Import All',
+  import: 'Import'
 };
 
 export const SYNC_BUTTON_STATES = {

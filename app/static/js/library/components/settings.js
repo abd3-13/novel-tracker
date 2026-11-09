@@ -1,6 +1,7 @@
 import { escapeHtml } from './../utils.js';
 import { saveSetting } from './../api.js';
 import { CARD_METADATA } from './card-metadata.js';
+import { IMPORT_METADATA, getSelectedImportMetadata, saveSelectedImportMetadata } from './import-metadata.js';
 
 const OVERLAY_STORAGE_KEY = 'library.cardOverlayMetadata';
 
@@ -231,6 +232,49 @@ function renderOverlaySettings() {
   `;
 }
 
+function renderImportRowSettings() {
+  const selected = new Set(getSelectedImportMetadata());
+
+  return `
+    <div class="card mb-3">
+      <div class="card-header">
+        <div class="d-flex align-items-center gap-3">
+          <span class="avatar avatar-sm bg-primary-lt"><i class="ti ti-list-details"></i></span>
+
+          <div>
+            <h3 class="card-title mb-0">Import row details</h3>
+            <div class="text-secondary small">Choose which metadata appears in the import result list.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="form-selectgroup form-selectgroup-boxes d-flex flex-wrap gap-1">
+          ${IMPORT_METADATA.map(
+            option => `
+              <label class="form-selectgroup-item flex-fill">
+                <input type="checkbox" class="form-selectgroup-input settings-import-toggle" data-setting-value="${option.id}" ${selected.has(option.id) ? 'checked' : ''}/>
+
+                <span class="form-selectgroup-label d-flex align-items-center justify-content-center gap-1 p-2"><i class="ti ti-${option.icon}"></i>${escapeHtml(option.label)}</span>
+              </label>
+            `
+          ).join('')}
+        </div>
+
+        <div class="alert alert-info-lt mt-3 mb-0" role="alert">
+          <div class="d-flex gap-2">
+            <i class="ti ti-info-circle"></i>
+            <div>
+              <div class="fw-semibold">Saved in this browser</div>
+              <div class="small">These options persist across sessions. The filename is always shown.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 export function renderSettingsPanel() {
   const container = document.getElementById('library-settings-content');
 
@@ -246,6 +290,7 @@ export function renderSettingsPanel() {
 
   container.innerHTML = `
     ${renderOverlaySettings()}
+    ${renderImportRowSettings()}
     ${settingsContent}
 
     <div class="settings-save-bar">
@@ -269,6 +314,10 @@ function bindSettingsEvents() {
 
   document.querySelectorAll('.settings-overlay-toggle').forEach(input => {
     input.addEventListener('change', saveOverlaySettings);
+  });
+
+  document.querySelectorAll('.settings-import-toggle').forEach(input => {
+    input.addEventListener('change', saveImportRowSettings);
   });
 }
 
@@ -336,6 +385,22 @@ function saveOverlaySettings() {
   document.dispatchEvent(new CustomEvent('library:overlay-settings-changed', { detail: { selected } }));
 
   window.showLibraryNotification?.('Card overlay settings updated.', 'success');
+}
+
+function saveImportRowSettings() {
+  const selected = Array.from(document.querySelectorAll('.settings-import-toggle:checked')).map(input => input.dataset.settingValue);
+
+  if (!selected.length) {
+    window.showLibraryNotification?.('Select at least one import detail.', 'warning');
+    renderSettingsPanel();
+    return;
+  }
+
+  saveSelectedImportMetadata(selected);
+
+  document.dispatchEvent(new CustomEvent('library:import-row-settings-changed', { detail: { selected } }));
+
+  window.showLibraryNotification?.('Import row details updated.', 'success');
 }
 
 export function initSettingsPanel() {

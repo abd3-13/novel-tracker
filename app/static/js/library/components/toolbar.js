@@ -101,6 +101,7 @@ export function renderToolbar(library) {
           <div class="dropdown-menu" id="sort-dropdown-menu">${renderSortMenu(library.sort)}</div>
         </div>
         <div class="col-auto"><button id="toolbar-filter" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#library-filter-panel"><i class="ti ti-filter me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.filter}</span></button></div>
+        <div class="col-auto"><button id="toolbar-import" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#import-offcanvas"><i class="ti ti-file-import me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.import}</span></button></div>
         <div class="col-auto"><button id="toolbar-sync" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#sync-offcanvas"><i class="ti ti-refresh me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.synchronize}</span></button></div>
          <div class="col-auto"><button id="toolbar-select" class="btn btn-outline-secondary"><i class="ti ti-checkbox me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.select}</span></button></div>
         </div>
