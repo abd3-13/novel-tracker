@@ -93,6 +93,31 @@ class LocalProvider(BaseProvider):
             self.ctx.logger.warning(
                 f"{self.novel[MetadataKey.TITLE]} has no EPUB file."
             )
+            self.data = {MetadataKey.EPUB_EXISTS: False}
+            return
+
+        epub_path = (
+            Path(db.get_value(SettingKey.LOCAL_EPUB_DIR) or DefaultValue.CURRENT_DIR)
+            / self.filepath
+        )
+
+        # ---------------------------------------------------------
+        # Missing EPUB
+        #
+        # Reading metadata would raise FileNotFoundError, which the
+        # runner treats as a per-novel failure and skips entirely --
+        # including the epub_exists update. Record the missing file
+        # and stop here instead, so the rest of the sync can commit
+        # epub_exists=False.
+        # ---------------------------------------------------------
+
+        if not epub_path.is_file():
+            self.ctx.logger.warning(f"EPUB file not found: {epub_path}")
+            self.data = {
+                MetadataKey.EPUB_EXISTS: False,
+                MetadataKey.FILEPATH: self.filepath,
+            }
+            self.ctx.logger.debug("Local provider loaded 2 fields (EPUB missing).")
             return
 
         # ---------------------------------------------------------
@@ -117,12 +142,7 @@ class LocalProvider(BaseProvider):
             MetadataKey.CHARACTERS: self.meta.characters,
             MetadataKey.COVER: self.meta.cover_id,
             MetadataKey.FILEPATH: self.filepath,
-            MetadataKey.EPUB_EXISTS: (
-                Path(
-                    db.get_value(SettingKey.LOCAL_EPUB_DIR) or DefaultValue.CURRENT_DIR
-                )
-                / self.filepath
-            ).exists(),
+            MetadataKey.EPUB_EXISTS: True,
         }
 
         self.ctx.logger.debug(f"Local provider loaded {len(self.data)} fields.")
