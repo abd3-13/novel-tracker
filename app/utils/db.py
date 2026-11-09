@@ -485,7 +485,7 @@ def get_db_filesNcover(table=DEFAULT_TABLE):
     tuple[set, set]
       (epub filenames, cover filenames)
     """
-    rows, _, _ = fetch_all(
+    rows = fetch_all(
         f"SELECT filepath, cover_path FROM {table} WHERE filepath IS NOT NULL OR cover_path IS NOT NULL ORDER BY filepath",
         close=True,
     )
@@ -528,7 +528,7 @@ def find_dup_title_db(input_title, table=DEFAULT_TABLE):
     dict | None
     """
     normalized = normalize_title(input_title)
-    rows, _, _ = fetch_all(f"SELECT id, name FROM {table}", close=True)
+    rows = fetch_all(f"SELECT id, name FROM {table}", close=True)
     for novel_id, title in rows:
         if normalize_title(title) == normalized:
             return {"id": novel_id, "name": title}
