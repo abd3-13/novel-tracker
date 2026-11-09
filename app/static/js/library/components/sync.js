@@ -568,6 +568,10 @@ function handleJobFinish(data) {
 
   // Final result screen.
   renderSyncResult(data);
+
+  // Committed changes are now in the database. Refresh the library so the
+  // header stats and cards reflect them without requiring a page reload.
+  document.dispatchEvent(new CustomEvent('library:novel-updated'));
 }
 
 function bindEvents() {

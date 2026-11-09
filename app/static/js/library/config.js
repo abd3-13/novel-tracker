@@ -215,6 +215,21 @@ export const FILTER_FIELDS = [
   },
 
   {
+    category: 'File',
+    items: [
+      {
+        field: 'epubExists',
+        label: 'EPUB Exists',
+        type: 'enum',
+        editor: 'select',
+        icon: 'file-check',
+        values: ['Available', 'Missing'],
+        getter: novel => (novel.epub.exists ? 'Available' : 'Missing')
+      }
+    ]
+  },
+
+  {
     category: 'Novel',
     items: [
       {
@@ -287,6 +302,12 @@ export const SORT_OPTIONS = [
       { field: 'newCharacters', label: 'New Characters', direction: 'desc', icon: 'users-plus' },
       { field: 'characters', label: 'Local Characters', direction: 'desc', icon: 'users' },
       { field: 'onlineCharacters', label: 'Online Characters', direction: 'desc', icon: 'cloud' }
+    ]
+  },
+  {
+    group: 'File',
+    items: [
+      { field: 'epubExists', label: 'EPUB Exists', direction: 'desc', icon: 'file-check' }
     ]
   },
   {

@@ -163,7 +163,7 @@ export function bindFilterPanel(library) {
       id: nextFilterId(),
       field: definition.field,
       operator: getOperators(definition.field)[0],
-      value: ''
+      value: definition.values?.[0] ?? ''
     };
 
     library.filters.push(filter);
@@ -190,7 +190,7 @@ export function bindFilterPanel(library) {
 
       filter.field = definition.field;
       filter.operator = getOperators(definition.field)[0];
-      filter.value = '';
+      filter.value = definition.values?.[0] ?? '';
 
       updateFilterPanel(library);
     };
