@@ -45,8 +45,8 @@ def convert_to_webp(
             image_path.unlink()
             return webp_path
     else:
-        # overwrite=True -> remove existing WebP first
-        webp_path.unlink()
+        # overwrite=True -> remove existing WebP first (may not exist yet)
+        webp_path.unlink(missing_ok=True)
 
     try:
         with Image.open(image_path) as img:

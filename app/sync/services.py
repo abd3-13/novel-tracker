@@ -118,7 +118,7 @@ def _last_chapter(toc_item):
     return toc_item.title, toc_item.href
 
 
-def _extract_cover_bytes(book) -> bytes | None:
+def _cover_item(book):
     """
     Prefer the EPUB's officially declared cover item; fall back to the first
     image in the manifest if the book doesn't declare one properly (common
@@ -131,6 +131,11 @@ def _extract_cover_bytes(book) -> bytes | None:
         cover_item = next(
             (i for i in book.get_items() if i.get_type() == _ITEM_TYPE_IMAGE), None
         )
+    return cover_item
+
+
+def _extract_cover_bytes(book) -> bytes | None:
+    cover_item = _cover_item(book)
     return cover_item.get_content() if cover_item else None
 
 
@@ -229,6 +234,11 @@ def extract_epub_cover(
 
     cover_id = cover_id or DefaultValue.NO_COVER
 
+    # Metadata cover ids already carry a ".webp" suffix; keep the final
+    # filename single-suffixed regardless of how the id was supplied.
+    if cover_id.lower().endswith(".webp"):
+        cover_id = cover_id[:-5]
+
     cover_dir = Path(
         db.get_value(SettingKey.COVER_PATH) or DefaultValue.CURRENT_COVER_DIR
     )
@@ -283,6 +293,12 @@ def extract_epub_cover(
         if not converted_path:
             logger.error("Failed to convert cover to WebP: %s", epub_path)
             return ""
+
+        # convert_to_webp keeps the temporary dot-prefixed name. Move the
+        # converted image to the final cover path expected by the database.
+        if converted_path != cover_path:
+            cover_path.unlink(missing_ok=True)
+            converted_path.rename(cover_path)
 
         logger.info("Converted and saved cover: %s", cover_path)
         return cover_path.name
