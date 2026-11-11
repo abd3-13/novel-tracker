@@ -173,3 +173,53 @@ def test_build_novel_from_metadata_uses_explicit_title_and_cover():
     assert novel["cover_path"] == "chosen.webp"
     assert novel["filepath"] == "file.epub"
     assert novel["epub_exists"] is True
+
+
+def test_iter_import_files_emits_progress_then_done(monkeypatch, tmp_path):
+    make_epub(tmp_path, "one.epub")
+    make_epub(tmp_path, "two.epub")
+
+    patch_import(monkeypatch, tmp_path)
+    monkeypatch.setattr(importer.db, "insert_novel", lambda data, table: True)
+
+    events = list(
+        importer.iter_import_files(
+            ["one.epub", "../bad.epub", "two.epub"], "novels"
+        )
+    )
+
+    names = [event for event, _ in events]
+
+    assert names[0] == "start"
+    assert names[-1] == "done"
+    assert "file_start" in names
+    assert "stage" in names
+    assert "file_done" in names
+
+    statuses = [
+        data["status"] for event, data in events if event == "file_done"
+    ]
+
+    assert statuses == ["imported", "failed", "imported"]
+    assert events[-1][1]["summary"] == {
+        "requested": 3,
+        "imported": 2,
+        "skipped": 0,
+        "failed": 1,
+    }
+
+
+def test_iter_import_files_reports_skipped_files(monkeypatch, tmp_path):
+    make_epub(tmp_path)
+
+    patch_import(
+        monkeypatch,
+        tmp_path,
+        _known_files=lambda table: {"book.epub"},
+    )
+
+    events = list(importer.iter_import_files(["book.epub"], "novels"))
+    file_done = next(data for event, data in events if event == "file_done")
+
+    assert file_done["status"] == "skipped"
+    assert file_done["reason"] == "Already in database."

@@ -112,10 +112,55 @@
     <!-- ========================================================= -->
     <!-- Importing -->
     <!-- ========================================================= -->
-    <div id="import-progress-view" class="d-none text-center py-5">
-      <div class="spinner-border text-primary mb-3" role="status"></div>
-      <div class="fw-bold">Importing EPUBs...</div>
-      <div class="text-muted" id="import-progress-count">0 selected</div>
+    <div id="import-progress-view" class="d-none">
+      <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <div class="fw-bold">Importing EPUBs</div>
+            <div class="text-muted small" id="import-progress-count">0 / 0</div>
+          </div>
+
+          <span class="badge bg-blue-lt" id="import-progress-percent">0%</span>
+        </div>
+
+        <div class="progress">
+          <div id="import-progress-bar" class="progress-bar" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="flex-fill min-width-0">
+            <div class="fw-bold text-truncate" id="import-current-file">Waiting...</div>
+            <div class="text-muted small" id="import-current-status">Preparing import</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title mb-0">Results</h3>
+        </div>
+
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-4 text-green">
+              <div class="h2 mb-0" id="import-count-imported">0</div>
+              <div class="text-muted small">Imported</div>
+            </div>
+
+            <div class="col-4 text-yellow">
+              <div class="h2 mb-0" id="import-count-skipped">0</div>
+              <div class="text-muted small">Skipped</div>
+            </div>
+
+            <div class="col-4 text-red">
+              <div class="h2 mb-0" id="import-count-failed">0</div>
+              <div class="text-muted small">Failed</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ========================================================= -->
@@ -123,10 +168,10 @@
     <!-- ========================================================= -->
     <div id="import-result-view" class="d-none">
       <div class="text-center mb-4">
-        <div class="avatar avatar-xl bg-success-lt mb-3">
-          <i class="ti ti-check fs-1"></i>
+        <div class="avatar avatar-xl bg-success-lt mb-3" id="import-result-avatar">
+          <i class="ti ti-check fs-1" id="import-result-icon"></i>
         </div>
-        <h2>Import Complete</h2>
+        <h2 id="import-result-title">Import Complete</h2>
         <div class="text-muted" id="import-result-message"></div>
       </div>
 
@@ -156,6 +201,26 @@
         </div>
       </div>
     </div>
+
+    <!-- ========================================================= -->
+    <!-- Live log -->
+    <!-- ========================================================= -->
+    <div id="import-live-log" class="card mt-3 d-none">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h3 class="card-title mb-0">
+          <i class="ti ti-terminal-2 me-2"></i>
+          Live Log
+        </h3>
+
+        <button type="button" class="btn btn-sm btn-ghost-secondary" id="import-log-clear">
+          <i class="ti ti-trash"></i>
+        </button>
+      </div>
+
+      <div id="import-log-container" class="card-body p-0">
+        <div id="import-log-list" class="p-3"></div>
+      </div>
+    </div>
   </div>
 
   <div class="offcanvas-footer p-3 border-top">
@@ -172,6 +237,14 @@
     <div id="import-results-footer" class="d-none d-flex justify-content-end gap-2">
       <button id="import-back" class="btn">Back</button>
       <button id="import-submit" class="btn btn-primary" disabled>Import (0)</button>
+    </div>
+
+    <!-- Progress footer -->
+    <div id="import-progress-footer" class="d-none d-flex justify-content-end gap-2">
+      <button id="import-cancel" class="btn btn-danger">
+        <i class="ti ti-cancel me-1"></i>
+        Cancel Import
+      </button>
     </div>
 
     <!-- Result footer -->

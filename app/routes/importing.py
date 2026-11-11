@@ -14,7 +14,7 @@ from flask import (
 from flask_login import current_user, login_required
 
 from app.constants import AuthRole, Default
-from app.importer.importer import import_files
+from app.importer.importer import import_files, iter_import_files
 from app.importer.scanner import iter_scan_library, scan_library
 from app.sync.services import get_epub_cover_bytes
 from app.utils import db
@@ -161,6 +161,61 @@ def api_import_files():
         ), 500
 
     return jsonify({"success": True, **result})
+
+
+@import_bp.post("/api/v1/import/events")
+@login_required
+def api_import_files_events():
+    table = _import_table()
+
+    if table is None:
+        return _forbidden()
+
+    payload = request.get_json(silent=True) or {}
+    filenames = payload.get("filenames")
+
+    if not isinstance(filenames, list) or not filenames:
+        return jsonify(
+            {
+                "success": False,
+                "message": "Select at least one EPUB to import.",
+                "category": "warning",
+            }
+        ), 400
+
+    if not all(isinstance(name, str) and name for name in filenames):
+        return jsonify(
+            {
+                "success": False,
+                "message": "Invalid EPUB selection.",
+                "category": "warning",
+            }
+        ), 400
+
+    def event_stream():
+        try:
+            for event, data in iter_import_files(filenames, table):
+                yield json.dumps({"event": event, "data": data}) + "\n"
+        except ValueError as exc:
+            current_app.logger.warning(f"Import failed: {exc!s}")
+            yield json.dumps(
+                {"event": "error", "data": {"message": str(exc)}}
+            ) + "\n"
+        except Exception as exc:  # noqa: BLE001
+            current_app.logger.exception(f"Failed to import EPUBs: {exc!s}")
+            yield json.dumps(
+                {"event": "error", "data": {"message": "Failed to import EPUBs."}}
+            ) + "\n"
+
+    return Response(
+        stream_with_context(event_stream()),
+        mimetype="application/x-ndjson",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @import_bp.get("/api/v1/import/cover")

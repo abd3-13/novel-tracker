@@ -279,6 +279,71 @@ export async function importEpubs(filenames) {
   return result;
 }
 
+export async function streamImport(filenames, handlers = {}, signal) {
+  const response = await fetch('/api/v1/import/events', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ filenames }),
+    signal
+  });
+
+  if (!response.ok) {
+    let message = `Failed to import EPUBs (${response.status}).`;
+
+    try {
+      const result = await response.json();
+
+      if (result.message) message = result.message;
+    } catch {
+      // Non-JSON error response.
+    }
+
+    throw new Error(message);
+  }
+
+  if (!response.body) {
+    throw new Error('Streaming is not supported by this browser.');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  const dispatch = line => {
+    if (!line.trim()) return;
+
+    let payload;
+
+    try {
+      payload = JSON.parse(line);
+    } catch {
+      console.error('Invalid import stream line:', line);
+      return;
+    }
+
+    handlers[payload.event]?.(payload.data);
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+
+    lines.forEach(dispatch);
+  }
+
+  buffer += decoder.decode();
+
+  if (buffer.trim()) dispatch(buffer);
+}
+
 export async function saveSetting(key, value) {
   const response = await fetch('/api/v1/settings', {
     method: 'POST',

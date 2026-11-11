@@ -573,6 +573,31 @@
   background: var(--tblr-bg-surface-secondary);
 }
 
+#import-offcanvas .offcanvas-body {
+  min-height: 0;
+}
+
+#import-progress-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+#import-live-log {
+  min-height: 120px;
+  max-height: 40vh;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+#import-log-container {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .import-scan-icon {
     animation: none;

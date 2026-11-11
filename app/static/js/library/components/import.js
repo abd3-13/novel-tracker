@@ -1,5 +1,5 @@
 import { escapeHtml } from './../utils.js';
-import { importEpubs, listenImportScan } from './../api.js';
+import { listenImportScan, streamImport } from './../api.js';
 import { IMPORT_TEXT } from './../config.js';
 import { buildImportDetail, getSelectedImportMetadataDefinitions } from './import-metadata.js';
 
@@ -14,6 +14,7 @@ const VIEWS = {
 const FOOTERS = {
   config: 'import-config-footer',
   results: 'import-results-footer',
+  progress: 'import-progress-footer',
   result: 'import-result-footer'
 };
 
@@ -302,18 +303,239 @@ function scan() {
   });
 }
 
-function showResult(result) {
+const importState = {
+  controller: null,
+  silentAbort: false,
+  total: 0,
+  imported: 0,
+  skipped: 0,
+  failed: 0,
+  results: [],
+  finalResult: null,
+  streamError: null
+};
+
+const IMPORT_STAGE_LABELS = {
+  metadata: 'Reading metadata...',
+  cover: 'Extracting cover...',
+  insert: 'Saving to library...'
+};
+
+function updateImportCounters() {
+  setText('import-count-imported', String(importState.imported));
+  setText('import-count-skipped', String(importState.skipped));
+  setText('import-count-failed', String(importState.failed));
+}
+
+function updateImportProgress(current, total) {
+  const percent = total ? Math.round((current / total) * 100) : 0;
+
+  setText('import-progress-count', `${current} / ${total}`);
+  setText('import-progress-percent', `${percent}%`);
+
+  const bar = document.getElementById('import-progress-bar');
+
+  if (bar) bar.style.width = `${percent}%`;
+}
+
+function resetImportProgress() {
+  importState.total = 0;
+  importState.imported = 0;
+  importState.skipped = 0;
+  importState.failed = 0;
+  importState.results = [];
+  importState.finalResult = null;
+  importState.streamError = null;
+
+  updateImportProgress(0, 0);
+  updateImportCounters();
+
+  setText('import-current-file', 'Waiting...');
+  setText('import-current-status', 'Preparing import');
+}
+
+function resetImportLog() {
+  const list = document.getElementById('import-log-list');
+
+  if (list) list.innerHTML = '';
+
+  document.getElementById('import-live-log')?.classList.add('d-none');
+}
+
+function addImportLog(message, type = 'info') {
+  const container = document.getElementById('import-live-log');
+  const list = document.getElementById('import-log-list');
+
+  if (!container || !list) return;
+
+  container.classList.remove('d-none');
+
+  const row = document.createElement('div');
+  row.className = 'font-monospace small';
+
+  const time = document.createElement('span');
+  time.className = 'text-secondary';
+  time.textContent = new Date().toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
+  const text = document.createElement('span');
+  text.className = `ms-2 ${
+    {
+      info: 'text-muted',
+      success: 'text-success',
+      warning: 'text-warning',
+      error: 'text-danger'
+    }[type] || 'text-muted'
+  }`;
+  text.textContent = message;
+
+  row.append(time, text);
+  list.appendChild(row);
+
+  const scrollContainer = document.getElementById('import-log-container');
+
+  if (scrollContainer) {
+    scrollContainer.scrollTop = scrollContainer.scrollHeight;
+  }
+}
+
+function partialResult() {
+  return {
+    summary: {
+      requested: importState.total,
+      imported: importState.imported,
+      skipped: importState.skipped,
+      failed: importState.failed
+    },
+    results: importState.results
+  };
+}
+
+function handleImportStart(data) {
+  importState.total = data.total || 0;
+
+  updateImportProgress(0, importState.total);
+  updateImportCounters();
+
+  setText('import-current-file', 'Preparing import...');
+  setText('import-current-status', `${importState.total} EPUB(s) selected`);
+
+  addImportLog(`Import started — ${importState.total} EPUB(s) selected.`, 'info');
+}
+
+function handleImportFileStart(data) {
+  updateImportProgress((data.current || 1) - 1, data.total || 0);
+
+  setText('import-current-file', data.filename || '');
+  setText('import-current-status', 'Preparing import...');
+
+  addImportLog(`[${data.current}/${data.total}] ${data.filename}`, 'info');
+}
+
+function handleImportStage(data) {
+  const label = IMPORT_STAGE_LABELS[data.stage] || data.stage;
+
+  setText('import-current-status', label);
+  addImportLog(`  ↳ ${label}`, 'info');
+}
+
+function handleImportFileDone(data) {
+  if (data.status === 'imported') {
+    importState.imported += 1;
+  } else if (data.status === 'skipped') {
+    importState.skipped += 1;
+  } else {
+    importState.failed += 1;
+  }
+
+  importState.results.push({
+    filename: data.filename,
+    status: data.status,
+    ...(data.reason ? { reason: data.reason } : {})
+  });
+
+  updateImportProgress(data.current || 0, data.total || 0);
+  updateImportCounters();
+
+  const title = data.title || data.filename;
+
+  if (data.status === 'imported') {
+    setText('import-current-file', title);
+    setText('import-current-status', IMPORT_TEXT.imported);
+    addImportLog(`  ✔ Imported — ${title}`, 'success');
+  } else if (data.status === 'skipped') {
+    setText('import-current-status', data.reason || IMPORT_TEXT.skipped);
+    addImportLog(`  ⚠ Skipped — ${data.reason || IMPORT_TEXT.skipped}`, 'warning');
+  } else {
+    setText('import-current-status', data.reason || IMPORT_TEXT.failed);
+    addImportLog(`  ✖ Failed — ${data.reason || IMPORT_TEXT.failed}`, 'error');
+  }
+}
+
+function handleImportDone(data) {
+  importState.finalResult = data;
+  addImportLog('Import finished.', 'info');
+}
+
+function handleImportError(data) {
+  const message = data.message || IMPORT_TEXT.importFailed;
+
+  importState.streamError = message;
+  addImportLog(message, 'error');
+}
+
+function cancelImport() {
+  if (!importState.controller) return;
+
+  addImportLog('Cancelling import...', 'warning');
+
+  importState.controller.abort();
+}
+
+function stopImport(silent = false) {
+  if (!importState.controller) return;
+
+  importState.silentAbort = silent;
+  importState.controller.abort();
+}
+
+function showResult(result, options = {}) {
   const summary = result.summary || {};
   const results = result.results || [];
+  const failed = summary.failed || 0;
+  const tone = options.tone || (failed ? 'warning' : 'success');
+  const icon = options.icon || (failed ? 'alert-triangle' : 'check');
+  const title = options.title || (failed ? 'Import Finished' : 'Import Complete');
 
   document.getElementById('import-result-imported').textContent = summary.imported || 0;
   document.getElementById('import-result-skipped').textContent = summary.skipped || 0;
   document.getElementById('import-result-failed').textContent = summary.failed || 0;
 
+  const avatar = document.getElementById('import-result-avatar');
+
+  if (avatar) {
+    ['bg-success-lt', 'bg-warning-lt', 'bg-danger-lt'].forEach(className => {
+      avatar.classList.toggle(className, className === `bg-${tone}-lt`);
+    });
+  }
+
+  const iconElement = document.getElementById('import-result-icon');
+
+  if (iconElement) iconElement.className = `ti ti-${icon} fs-1`;
+
+  const titleElement = document.getElementById('import-result-title');
+
+  if (titleElement) titleElement.textContent = title;
+
   const message = document.getElementById('import-result-message');
 
   if (message) {
-    message.textContent = `${summary.imported || 0} imported, ${summary.skipped || 0} skipped, ${summary.failed || 0} failed.`;
+    message.textContent =
+      options.message ||
+      `${summary.imported || 0} imported, ${summary.skipped || 0} skipped, ${summary.failed || 0} failed.`;
   }
 
   const problems = results.filter(item => item.status !== 'imported');
@@ -347,20 +569,64 @@ async function submit() {
 
   if (!filenames.length) return;
 
-  const progress = document.getElementById('import-progress-count');
-
-  if (progress) {
-    progress.textContent = `${filenames.length} selected`;
-  }
-
+  resetImportProgress();
+  resetImportLog();
   setView('progress');
 
+  const controller = new AbortController();
+
+  importState.controller = controller;
+  importState.silentAbort = false;
+
   try {
-    const result = await importEpubs(filenames);
-    showResult(result);
+    await streamImport(
+      filenames,
+      {
+        start: handleImportStart,
+        file_start: handleImportFileStart,
+        stage: handleImportStage,
+        file_done: handleImportFileDone,
+        done: handleImportDone,
+        error: handleImportError
+      },
+      controller.signal
+    );
+
+    if (importState.finalResult) {
+      showResult(importState.finalResult);
+    } else if (importState.streamError) {
+      window.showLibraryNotification?.(importState.streamError, 'error');
+      showResult(partialResult());
+    }
   } catch (error) {
-    window.showLibraryNotification?.(error.message || IMPORT_TEXT.importFailed, 'error');
-    setView('results');
+    if (error.name === 'AbortError') {
+      if (!importState.silentAbort) {
+        addImportLog('Import cancelled.', 'warning');
+        showResult(partialResult(), {
+          title: 'Import Cancelled',
+          icon: 'cancel',
+          tone: 'warning',
+          message: `Import cancelled after ${
+            importState.imported + importState.skipped + importState.failed
+          } of ${importState.total} files.`
+        });
+      }
+
+      return;
+    }
+
+    const message = error.message || IMPORT_TEXT.importFailed;
+
+    window.showLibraryNotification?.(message, 'error');
+    addImportLog(message, 'error');
+    showResult(partialResult(), {
+      title: 'Import Failed',
+      icon: 'alert-circle',
+      tone: 'danger'
+    });
+  } finally {
+    importState.controller = null;
+    importState.silentAbort = false;
   }
 }
 
@@ -374,6 +640,13 @@ export function initImportPanel() {
   document.getElementById('import-scan')?.addEventListener('click', scan);
   document.getElementById('import-back')?.addEventListener('click', () => setView('config'));
   document.getElementById('import-submit')?.addEventListener('click', submit);
+  document.getElementById('import-cancel')?.addEventListener('click', cancelImport);
+
+  document.getElementById('import-log-clear')?.addEventListener('click', () => {
+    const list = document.getElementById('import-log-list');
+
+    if (list) list.innerHTML = '';
+  });
 
   document.getElementById('import-select-all')?.addEventListener('change', event => {
     state.selected = event.target.checked
@@ -400,6 +673,8 @@ export function initImportPanel() {
   panel.addEventListener('shown.bs.offcanvas', () => setDirectory());
   panel.addEventListener('hidden.bs.offcanvas', () => {
     stopScan();
+    stopImport(true);
+    resetImportLog();
     setView('config');
   });
 
