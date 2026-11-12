@@ -44,6 +44,11 @@
 .missing-epub-list {
   max-height: 45vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+body.modal-open {
+  overflow: hidden;
 }
 
 @keyframes library-missing-blink {

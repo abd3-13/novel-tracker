@@ -11,6 +11,8 @@ function showMissingEpubDialog(missingNovels) {
   }
 
   document.getElementById('missing-epub-dialog')?.remove();
+  document.getElementById('missing-epub-backdrop')?.remove();
+  document.body.classList.remove('modal-open');
 
   const novelRows = missingNovels
     .map(novel => {
@@ -27,12 +29,16 @@ function showMissingEpubDialog(missingNovels) {
     .join('');
 
   const dialog = document.createElement('div');
+  const backdrop = document.createElement('div');
 
   dialog.id = 'missing-epub-dialog';
   dialog.className = 'modal modal-blur fade show';
   dialog.style.display = 'block';
   dialog.setAttribute('role', 'dialog');
   dialog.setAttribute('aria-modal', 'true');
+
+  backdrop.id = 'missing-epub-backdrop';
+  backdrop.className = 'modal-backdrop fade show';
 
   dialog.innerHTML = `
     <div class="modal-dialog modal-dialog-centered" role="document">
@@ -70,10 +76,30 @@ function showMissingEpubDialog(missingNovels) {
     </div>
   `;
 
-  const close = () => dialog.remove();
+  const close = () => {
+    dialog.remove();
+    backdrop.remove();
+    document.body.classList.remove('modal-open');
+    document.removeEventListener('keydown', onKeydown);
+  };
+
+  function onKeydown(event) {
+    if (event.key === 'Escape') {
+      close();
+    }
+  }
 
   dialog.querySelector('.btn-close').addEventListener('click', close);
   dialog.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.addEventListener('click', close);
+
+  dialog.addEventListener('click', event => {
+    if (event.target === dialog) {
+      close();
+    }
+  });
+
+  document.addEventListener('keydown', onKeydown);
 
   dialog.querySelector('[data-action="cleanup"]').addEventListener('click', async event => {
     const button = event.currentTarget;
@@ -101,6 +127,8 @@ function showMissingEpubDialog(missingNovels) {
     }
   });
 
+  document.body.classList.add('modal-open');
+  document.body.appendChild(backdrop);
   document.body.appendChild(dialog);
 }
 
