@@ -76,6 +76,8 @@ def test_runner_stops_after_current_novel_when_cancelled(sync_job, novel_factory
     novels = [novel_factory(1), novel_factory(2), novel_factory(3)]
     cancel = threading.Event()
 
+    runner._select = lambda job: novels
+
     result_holder = {}
 
     def run():

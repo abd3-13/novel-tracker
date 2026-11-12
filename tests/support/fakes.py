@@ -14,7 +14,7 @@ class BlockingEngine:
         self.first_started = threading.Event()
         self.release_first = threading.Event()
 
-    def run(self, job, novel):
+    def run(self, job, novel, is_cancelled=None):
         novel_id = novel["id"]
         self.processed.append(novel_id)
 
@@ -39,7 +39,7 @@ class RecordingEngine:
     def __init__(self):
         self.processed = []
 
-    def run(self, job, novel):
+    def run(self, job, novel, is_cancelled=None):
         self.processed.append(novel["id"])
         return {
             "id": novel["id"],
