@@ -20,7 +20,7 @@ class BulkSelector:
 
     @property
     def _select(self) -> str:
-        return f"SELECT * FROM {self.table}"
+        return f"SELECT * FROM {self.table} WHERE COALESCE(is_deleted, 0) = 0"
 
     # ------------------------------------------------------------------
     # Helpers
@@ -63,7 +63,7 @@ class BulkSelector:
         placeholders = ",".join("?" * len(ids))
 
         return self._fetch(
-            f"{self._select} WHERE {DatabaseColumn.ID} IN ({placeholders})", tuple(ids)
+            f"{self._select} AND {DatabaseColumn.ID} IN ({placeholders})", tuple(ids)
         )
 
     def column(self, column: str, value) -> list[dict]:
@@ -71,7 +71,7 @@ class BulkSelector:
         Select novels where a column matches a value.
         """
 
-        return self._fetch(f"{self._select} WHERE {column} = ?", (value,))
+        return self._fetch(f"{self._select} AND {column} = ?", (value,))
 
     def where(self, where: str, params=()) -> list[dict]:
         """
@@ -81,4 +81,4 @@ class BulkSelector:
             selector.where(f"{DatabaseColumn.ONLINE_CHAPTERS} > {DatabaseColumn.LOCAL_CHAPTERS}")
         """
 
-        return self._fetch(f"{self._select} WHERE {where}", params)
+        return self._fetch(f"{self._select} AND ({where})", params)

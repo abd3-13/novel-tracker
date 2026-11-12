@@ -150,6 +150,7 @@ def init_db():
       progress INTEGER NOT NULL DEFAULT 0,
       progress_updated DATETIME,
       discord_channel_url TEXT,
+      is_deleted INTEGER NOT NULL DEFAULT 0,
     )
   """)
     # ------------------------------------------------------------------
@@ -194,6 +195,40 @@ def init_db():
     """,
             (key, value),
         )
+    conn.commit()
+    conn.close()
+
+
+def ensure_schema():
+    """
+    Apply lightweight, additive schema migrations.
+
+    Existing databases are upgraded in place so the application does not need
+    a separate migration tool. Only columns that are safe to append are added
+    here; existing column order is preserved because some query builders still
+    read rows by position.
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+
+    tables = {
+        row[0]
+        for row in cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+    }
+
+    for table in (Default.NOVEL_TABLE, Default.DEMO_NOVEL_TABLE):
+        if table not in tables:
+            continue
+
+        columns = {row[1] for row in cur.execute(f"PRAGMA table_info({table})")}
+
+        if "is_deleted" not in columns:
+            cur.execute(
+                f"ALTER TABLE {table} ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0"
+            )
+
     conn.commit()
     conn.close()
 
@@ -372,16 +407,18 @@ def normalize_setting_value(value, metadata):
 
 def get_table(user):
     """
-    Return all novels from a table. based on user and role
-    Parameters
-    ----------
-    current_user: flask current user object
+    Return all active novels from a table, based on user and role.
+
+    Soft-deleted rows are never returned to the application.
     """
     table = get_user_table(user)
     role = user.role
-    query = f"SELECT * FROM {table}"
+    query = f"SELECT * FROM {table} WHERE COALESCE(is_deleted, 0) = 0"
     if role != "admin":
-        query = f"SELECT * FROM {table} WHERE tags NOT LIKE '%nsfw%'"
+        query = (
+            f"SELECT * FROM {table} "
+            "WHERE COALESCE(is_deleted, 0) = 0 AND tags NOT LIKE '%nsfw%'"
+        )
 
     return fetch_all(query, close=True)
 
@@ -429,12 +466,37 @@ def delete_novels(ids, table=DEFAULT_TABLE):
     execute(f"DELETE FROM {table} WHERE id IN ({ids})", commit=True, close=True)
 
 
+def delete_missing_epub_novels(table=DEFAULT_TABLE):
+    """
+    Flag every active novel whose EPUB is missing as deleted.
+
+    The rows stay in the database (so they can be inspected or recovered) but
+    are skipped everywhere the application reads novels.
+    Returns
+    -------
+    int
+      Number of rows flagged in this call.
+    """
+    cur, _ = execute(
+        f"""
+        UPDATE {table}
+        SET is_deleted = 1
+        WHERE COALESCE(is_deleted, 0) = 0
+          AND COALESCE(epub_exists, 0) = 0
+        """,
+        commit=True,
+        close=True,
+    )
+    return max(cur.rowcount, 0)
+
+
 def get_novel(novel_id, table=DEFAULT_TABLE, column="*", row_factory=True):
     """
-    Return one novel by ID.
+    Return one active novel by ID.
     """
     return fetch_one(
-        f"SELECT {column} FROM {table} WHERE id=?",
+        f"SELECT {column} FROM {table} "
+        "WHERE id=? AND COALESCE(is_deleted, 0) = 0",
         (novel_id,),
         row_factory=row_factory,
     )
@@ -546,6 +608,8 @@ def get_user_table(user):
 # Module Initialization
 # ============================================================================
 settings_dict = load_settings()
+ensure_schema()
+
 if __name__ == "__main__":
     init_db()
     print("Database initialized.")

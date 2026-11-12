@@ -404,7 +404,11 @@ def find_missing_epubs() -> list:
     }
 
     missing = []
-    rows, _, conn = db.fetch_all("SELECT id, name, filepath from novels", [])
+    rows, _, conn = db.fetch_all(
+        "SELECT id, name, filepath FROM novels "
+        "WHERE COALESCE(is_deleted, 0) = 0",
+        [],
+    )
     try:
         for book_id, name, path in rows:
             if path not in on_disk:

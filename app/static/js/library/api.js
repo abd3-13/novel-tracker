@@ -85,6 +85,20 @@ export async function deleteNovel(novelId) {
   return result;
 }
 
+export async function deleteMissingEpubs() {
+  const response = await fetch('/api/v1/library/missing-epub', {
+    method: 'DELETE'
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'Failed to clean up missing EPUB records.');
+  }
+
+  return result;
+}
+
 export async function fetchEPUB(novelID) {
    const epubURL = `/api/v1/epub/${novelID}`;
 

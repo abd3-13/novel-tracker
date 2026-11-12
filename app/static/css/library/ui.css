@@ -13,6 +13,46 @@
   border-bottom: 1px solid var(--tblr-border-color);
 }
 
+.library-missing-epub {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  line-height: inherit;
+  color: #ff7a45;
+  font-weight: 600;
+  text-decoration: none;
+  animation: library-missing-blink 2.4s ease-in-out infinite;
+}
+
+.library-missing-epub:hover,
+.library-missing-epub:focus-visible {
+  color: #ff9a6b;
+  text-decoration: underline;
+}
+
+.missing-epub-list {
+  max-height: 45vh;
+  overflow-y: auto;
+}
+
+@keyframes library-missing-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .library-missing-epub {
+    animation: none;
+  }
+}
+
 .nt-cover-top-overlay {
   position: absolute;
   inset: 0 0 auto 0;

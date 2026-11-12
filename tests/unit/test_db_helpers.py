@@ -33,3 +33,39 @@ def test_find_dup_title_db_reads_rows_returned_by_fetch_all(monkeypatch):
         "name": "Some Book",
     }
     assert db.find_dup_title_db("Missing Book", "novels") is None
+
+
+def test_get_table_excludes_soft_deleted_novels(monkeypatch):
+    captured = {}
+
+    class User:
+        role = "admin"
+
+    def fake_fetch_all(query, **kwargs):
+        captured["query"] = query
+        return []
+
+    monkeypatch.setattr(db, "get_user_table", lambda user: "novels")
+    monkeypatch.setattr(db, "fetch_all", fake_fetch_all)
+
+    assert db.get_table(User()) == []
+    assert "COALESCE(is_deleted, 0) = 0" in captured["query"]
+
+
+def test_delete_missing_epub_novels_flags_only_missing_active_rows(monkeypatch):
+    captured = {}
+
+    class Cursor:
+        rowcount = 3
+
+    def fake_execute(query, params=(), **kwargs):
+        captured["query"] = query
+        captured["params"] = params
+        return Cursor(), None
+
+    monkeypatch.setattr(db, "execute", fake_execute)
+
+    assert db.delete_missing_epub_novels("novels") == 3
+    assert "SET is_deleted = 1" in captured["query"]
+    assert "COALESCE(epub_exists, 0) = 0" in captured["query"]
+    assert "COALESCE(is_deleted, 0) = 0" in captured["query"]

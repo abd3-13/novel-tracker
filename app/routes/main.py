@@ -131,6 +131,40 @@ def api_library():
     return jsonify({"data": library})
 
 
+@main_bp.route("/api/v1/library/missing-epub", methods=["DELETE"])
+@login_required
+def api_delete_missing_epubs():
+    table = db.get_user_table(current_user)
+
+    try:
+        count = db.delete_missing_epub_novels(table=table)
+    except Exception as e:
+        current_app.logger.error(f"Failed to clean up missing EPUB records: {e!s}")
+        return jsonify(
+            {
+                "success": False,
+                "message": f"Failed to clean up missing EPUB records. {e!s}",
+                "category": "error",
+            }
+        ), 500
+
+    if count == 0:
+        message = "No missing EPUB records to clean up."
+    else:
+        message = (
+            f"{count} missing EPUB record{'s' if count != 1 else ''} flagged as deleted."
+        )
+
+    return jsonify(
+        {
+            "success": True,
+            "message": message,
+            "category": "success",
+            "data": {"deleted": count},
+        }
+    )
+
+
 @main_bp.route("/api/v1/library/<int:novel_id>", methods=["GET", "PATCH", "DELETE"])
 @login_required
 def api_library_novel(novel_id):
