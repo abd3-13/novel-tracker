@@ -79,6 +79,7 @@ export const TOOLBAR_TEXT = {
   import: 'Import',
   synchronize: 'Synchronize',
   select: 'Select',
+  actions: 'Actions',
   searchIcon: 'Search'
 };
 

@@ -227,6 +227,13 @@ export function bindFilterPanel(library) {
 }
 
 function updateFilterButtons(library) {
+  const count = document.getElementById('toolbar-filter-count');
+
+  if (count) {
+    count.textContent = library.filters.length;
+    count.classList.toggle('d-none', library.filters.length === 0);
+  }
+
   const apply = document.getElementById('filter-apply');
   const reset = document.getElementById('filter-reset');
 

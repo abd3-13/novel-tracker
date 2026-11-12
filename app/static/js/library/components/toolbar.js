@@ -88,6 +88,8 @@ export function bindToolbar(onSearch, onSort) {
 }
 
 export function renderToolbar(library) {
+  const filterCount = library.filters.length;
+
   document.getElementById('library-toolbar').innerHTML = `
       <div class="row g-2 align-items-center">
         <div class="col">
@@ -96,15 +98,29 @@ export function renderToolbar(library) {
             <input id="library-search" type="text" class="form-control" placeholder="${TOOLBAR_TEXT.searchPlaceholder}" value="${library.search}">
           </div>
         </div>
+        <div class="col-auto">
+          <button id="toolbar-filter" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#library-filter-panel">
+            <i class="ti ti-filter me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.filter}</span>
+            <span id="toolbar-filter-count" class="badge bg-primary ms-1 ${filterCount ? '' : 'd-none'}">${filterCount}</span>
+          </button>
+        </div>
         <div class="dropdown col-auto">
           <button id="library-sort-button" class="btn btn-outline-secondary" data-bs-toggle="dropdown"><i class="ti ti-${library.sort.icon} me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.sort}: ${library.sort.label}</span></button>
           <div class="dropdown-menu" id="sort-dropdown-menu">${renderSortMenu(library.sort)}</div>
         </div>
-        <div class="col-auto"><button id="toolbar-filter" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#library-filter-panel"><i class="ti ti-filter me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.filter}</span></button></div>
-        <div class="col-auto"><button id="toolbar-import" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#import-offcanvas"><i class="ti ti-file-import me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.import}</span></button></div>
-        <div class="col-auto"><button id="toolbar-sync" class="btn btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#sync-offcanvas"><i class="ti ti-refresh me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.synchronize}</span></button></div>
-         <div class="col-auto"><button id="toolbar-select" class="btn btn-outline-secondary"><i class="ti ti-checkbox me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.select}</span></button></div>
+        <div class="col-auto">
+          <div class="dropdown">
+            <button id="toolbar-actions" class="btn btn-outline-secondary" data-bs-toggle="dropdown" aria-expanded="false" title="${TOOLBAR_TEXT.actions}"><i class="ti ti-dots-vertical"></i><span class="d-none d-md-inline ms-1">${TOOLBAR_TEXT.actions}</span></button>
+            <div class="dropdown-menu dropdown-menu-end">
+              <div class="dropdown-header">Library</div>
+              <button type="button" id="toolbar-import" class="dropdown-item" data-bs-toggle="offcanvas" data-bs-target="#import-offcanvas"><i class="ti ti-file-import me-2"></i>${TOOLBAR_TEXT.import}</button>
+              <button type="button" id="toolbar-sync" class="dropdown-item" data-bs-toggle="offcanvas" data-bs-target="#sync-offcanvas"><i class="ti ti-refresh me-2"></i>${TOOLBAR_TEXT.synchronize}</button>
+              <div class="dropdown-divider"></div>
+              <button type="button" id="toolbar-select" class="dropdown-item"><i class="ti ti-checkbox me-2"></i>${TOOLBAR_TEXT.select}</button>
+            </div>
+          </div>
         </div>
+      </div>
       <div id="library-selection-bar" class="mt-2 d-none">
             <div class="card">
                 <div class="card-body py-2">
