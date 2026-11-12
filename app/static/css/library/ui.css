@@ -356,11 +356,33 @@ body.modal-open {
   position: sticky;
   bottom: 0;
   z-index: 10;
+  flex: 0 0 auto;
   background: var(--tblr-bg-surface, #fff);
+}
+
+#sync-offcanvas {
+  width: min(520px, 100vw);
 }
 
 #sync-offcanvas .offcanvas-body {
   min-height: 0;
+  overflow-y: auto;
+}
+
+/*
+ * While a sync is running (or its result is shown), split the panel height
+ * between the progress/result area and the live log. Both scroll on their
+ * own, so the log can never be pushed below the fold on short screens.
+ */
+#sync-offcanvas .offcanvas-body.sync-running {
+  overflow: hidden;
+}
+
+#sync-offcanvas .offcanvas-body.sync-running #sync-progress-view,
+#sync-offcanvas .offcanvas-body.sync-running #sync-result-view {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 #sync-progress-view.sync-active-view {
@@ -371,16 +393,60 @@ body.modal-open {
 }
 
 #sync-live-log {
-  min-height: 120px;
-  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  flex: 1 1 0;
+  min-height: 140px;
 }
 
 #sync-log-container {
   min-height: 0;
   flex: 1 1 auto;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sync-log-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.sync-log-time {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.sync-log-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 575.98px) {
+  #sync-offcanvas {
+    width: 100vw;
+  }
+
+  #sync-offcanvas .offcanvas-header {
+    padding: 1rem;
+  }
+
+  #sync-offcanvas .offcanvas-body {
+    padding: 1rem;
+  }
+
+  #sync-live-log {
+    min-height: 128px;
+  }
+
+  .sync-log-entry {
+    font-size: 0.75rem;
+  }
 }
 
 /* ========= Settings ========= */

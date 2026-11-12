@@ -234,6 +234,12 @@ function showSyncView(view) {
   document.getElementById(views[view])?.classList.remove('d-none');
 
   document.getElementById(footers[view])?.classList.remove('d-none');
+
+  // Keep the progress/result area and the live log inside the panel height so
+  // the log stays visible on short screens instead of being pushed below it.
+  document
+    .querySelector('#sync-offcanvas .offcanvas-body')
+    ?.classList.toggle('sync-running', view !== 'config');
 }
 
 function updateSyncStage(stage) {
@@ -348,7 +354,7 @@ function addSyncLog(message, type = 'info') {
   row.className = 'sync-log-entry font-monospace small';
 
   const time = document.createElement('span');
-  time.className = 'text-secondary';
+  time.className = 'sync-log-time text-secondary';
   time.textContent = new Date().toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
@@ -357,7 +363,7 @@ function addSyncLog(message, type = 'info') {
 
   const text = document.createElement('span');
 
-  text.className = `ms-2 ${
+  text.className = `sync-log-text ${
     {
       info: 'text-muted',
       success: 'text-success',
@@ -367,6 +373,7 @@ function addSyncLog(message, type = 'info') {
   }`;
 
   text.textContent = message;
+  text.title = message;
 
   row.append(time, text);
   list.appendChild(row);
