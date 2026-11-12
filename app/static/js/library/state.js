@@ -41,3 +41,11 @@ export const library = {
     filter: 0
   }
 };
+
+export function getLibrarySyncIds() {
+  if (library.ids.size) {
+    return [...library.ids];
+  }
+
+  return library.visible.map(novel => novel.id);
+}

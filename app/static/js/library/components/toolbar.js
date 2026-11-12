@@ -6,7 +6,7 @@ import {
   selectAll,
   selectBetweenSelected
 } from './selection.js';
-import { library } from './../state.js';
+import { library, getLibrarySyncIds } from './../state.js';
 import { TOOLBAR_TEXT, SELECTION_TEXT } from './../config.js';
 
 function renderSortMenu(sort) {
@@ -64,31 +64,52 @@ export function bindToolbar(onSearch, onSort) {
     });
   });
 
+  library.onSelectionChange = updateSyncActionCount;
+
   document.getElementById('toolbar-select').addEventListener('click', () => {
     library.selectionMode = true;
     updateSelectionBar(library);
+    updateSyncActionCount();
   });
 
   const container = document.getElementById('library-content');
   document.getElementById('selection-done').addEventListener('click', () => {
     exitSelectionMode(container, library);
+    updateSyncActionCount();
   });
 
   document.getElementById('selection-clear').addEventListener('click', () => {
     clearSelection(container, library);
+    updateSyncActionCount();
   });
 
   document.getElementById('selection-between').addEventListener('click', () => {
     selectBetweenSelected(container, library);
+    updateSyncActionCount();
   });
 
   document.getElementById('selection-select-all').addEventListener('click', () => {
     selectAll(container, library);
+    updateSyncActionCount();
   });
+}
+
+export function updateSyncActionCount() {
+  const button = document.getElementById('toolbar-sync');
+  const count = document.getElementById('toolbar-sync-count');
+
+  if (!button || !count) return;
+
+  const total = getLibrarySyncIds().length;
+
+  count.textContent = ` (${total})`;
+  button.disabled = total === 0;
+  button.classList.toggle('disabled', total === 0);
 }
 
 export function renderToolbar(library) {
   const filterCount = library.filters.length;
+  const syncCount = getLibrarySyncIds().length;
 
   document.getElementById('library-toolbar').innerHTML = `
       <div class="row g-2 align-items-center">
@@ -114,7 +135,7 @@ export function renderToolbar(library) {
             <div class="dropdown-menu dropdown-menu-end">
               <div class="dropdown-header">Library</div>
               <button type="button" id="toolbar-import" class="dropdown-item" data-bs-toggle="offcanvas" data-bs-target="#import-offcanvas"><i class="ti ti-file-import me-2"></i>${TOOLBAR_TEXT.import}</button>
-              <button type="button" id="toolbar-sync" class="dropdown-item" data-bs-toggle="offcanvas" data-bs-target="#sync-offcanvas"><i class="ti ti-refresh me-2"></i>${TOOLBAR_TEXT.synchronize}</button>
+              <button type="button" id="toolbar-sync" class="dropdown-item ${syncCount === 0 ? 'disabled' : ''}" data-bs-toggle="offcanvas" data-bs-target="#sync-offcanvas" ${syncCount === 0 ? 'disabled' : ''}><i class="ti ti-refresh me-2"></i>${TOOLBAR_TEXT.synchronize}<span id="toolbar-sync-count"> (${syncCount})</span></button>
               <div class="dropdown-divider"></div>
               <button type="button" id="toolbar-select" class="dropdown-item"><i class="ti ti-checkbox me-2"></i>${TOOLBAR_TEXT.select}</button>
             </div>

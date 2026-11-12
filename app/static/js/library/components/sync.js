@@ -1,4 +1,4 @@
-import { library } from '../state.js';
+import { getLibrarySyncIds } from '../state.js';
 import { getSyncRegistry, runSync, cancelSync, listenSyncProgress } from './../api.js';
 import { showNotification } from './../../notifi.js';
 import { SYNC_TEXT, SYNC_BUTTON_STATES, SYNC_CANCEL_BUTTON_STATES } from './../config.js';
@@ -43,9 +43,25 @@ export function openNovelSync(id) {
 
   resetSyncPanel();
 
+  showSyncPanel();
+}
+
+function showSyncPanel() {
   const offcanvas = document.getElementById('sync-offcanvas');
 
   if (!offcanvas) return;
+
+  // The card Sync button is handled by the card delegation, which stops
+  // propagation before Bootstrap's data-api can see the click.
+  const bootstrap = window.tabler?.bootstrap ?? window.bootstrap;
+
+  if (bootstrap?.Offcanvas) {
+    bootstrap.Offcanvas.getOrCreateInstance(offcanvas).show();
+    return;
+  }
+
+  offcanvas.classList.add('show');
+  offcanvas.style.visibility = 'visible';
 }
 
 export function initSyncPanel(library) {
@@ -54,6 +70,28 @@ export function initSyncPanel(library) {
   updateSyncConfig(library);
 
   bindEvents();
+
+  // Opening from the toolbar always means "sync the current library view",
+  // so drop any per-novel scope left over from a card Sync click and start
+  // from a clean configuration view.
+  document.getElementById('toolbar-sync')?.addEventListener('click', () => {
+    syncConfig.ids = [];
+    resetSyncPanel();
+  });
+
+  const offcanvas = document.getElementById('sync-offcanvas');
+
+  offcanvas?.addEventListener('show.bs.offcanvas', () => {
+    setSyncButtonState('idle');
+  });
+}
+
+function getSyncTargetIds() {
+  if (syncConfig.ids.length) {
+    return [...syncConfig.ids];
+  }
+
+  return getLibrarySyncIds();
 }
 
 function resetSyncPanel() {
@@ -627,7 +665,16 @@ function updateMetadataToggle() {
 
 function setSyncButtonState(state) {
   const button = document.getElementById('sync-start');
-  const config = SYNC_BUTTON_STATES[state] || SYNC_BUTTON_STATES.idle;
+  const buttonState = SYNC_BUTTON_STATES[state] ? state : 'idle';
+  const config = SYNC_BUTTON_STATES[buttonState];
+
+  if (buttonState === 'idle') {
+    const count = getSyncTargetIds().length;
+
+    button.disabled = count === 0;
+    button.innerHTML = `<i class="ti ti-refresh me-1"></i>${SYNC_TEXT.synchronize}${count ? ` (${count})` : ''}`;
+    return;
+  }
 
   button.disabled = config.disabled;
   button.innerHTML = config.html;
@@ -653,7 +700,7 @@ function collectJob() {
 
     fields: Array.from(document.querySelectorAll('.sync-field:checked')).map(cb => cb.value),
 
-    novels: syncConfig.ids.length ? [...syncConfig.ids] : [...library.ids]
+    novels: getSyncTargetIds()
   };
 }
 

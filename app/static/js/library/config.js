@@ -24,6 +24,7 @@ export const STATUS_STYLE = {
 export const SYNC_TEXT = {
   waiting: 'Waiting...',
   preparing: 'Preparing synchronization',
+  synchronize: 'Synchronize',
   synchronizing: 'Synchronizing...',
   complete: 'Synchronization Complete',
   finished: 'Synchronization finished.',
