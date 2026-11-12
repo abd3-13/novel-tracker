@@ -1,6 +1,16 @@
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--nt-card-min, 150px)), 1fr));
+  gap: 1rem;
+}
+
 @media (max-width: 767.98px) {
-  #library-content .row-cols-2 > * {
-    width: 25%;
+  .library-grid {
+    /* Keep the denser phone layout while still following the size slider. */
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(min(100%, max(64px, calc(var(--nt-card-min, 150px) * 0.5))), 1fr)
+    );
     gap: 0.5rem;
   }
 }

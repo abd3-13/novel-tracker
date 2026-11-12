@@ -5,9 +5,51 @@ import { IMPORT_METADATA, getSelectedImportMetadata, saveSelectedImportMetadata 
 
 const OVERLAY_STORAGE_KEY = 'library.cardOverlayMetadata';
 
+const CARD_SIZE_STORAGE_KEY = 'library.cardSize';
+const DEFAULT_CARD_SIZE = 150;
+const CARD_SIZE_MIN = 100;
+const CARD_SIZE_MAX = 260;
+const CARD_SIZE_STEP = 5;
+
 const OVERLAY_METADATA_IDS = new Set(CARD_METADATA.filter(metadata => metadata.overlay).map(metadata => metadata.id));
 
 const DEFAULT_OVERLAY_METADATA = CARD_METADATA.filter(metadata => metadata.overlay && metadata.overlayDefault).map(metadata => metadata.id);
+
+function clampCardSize(value) {
+  const size = Number(value);
+
+  if (!Number.isFinite(size)) {
+    return DEFAULT_CARD_SIZE;
+  }
+
+  return Math.min(CARD_SIZE_MAX, Math.max(CARD_SIZE_MIN, Math.round(size)));
+}
+
+export function getCardSize() {
+  try {
+    const stored = localStorage.getItem(CARD_SIZE_STORAGE_KEY);
+
+    return stored === null ? DEFAULT_CARD_SIZE : clampCardSize(stored);
+  } catch {
+    return DEFAULT_CARD_SIZE;
+  }
+}
+
+export function applyCardSize(size = getCardSize()) {
+  const clamped = clampCardSize(size);
+
+  document.documentElement.style.setProperty('--nt-card-min', `${clamped}px`);
+
+  return clamped;
+}
+
+function saveCardSize(size) {
+  try {
+    localStorage.setItem(CARD_SIZE_STORAGE_KEY, String(size));
+  } catch {
+    // Storage can be unavailable in private browsing; keep the in-memory size.
+  }
+}
 
 export function getSelectedOverlayMetadata() {
   const stored = sessionStorage.getItem(OVERLAY_STORAGE_KEY);
@@ -186,6 +228,49 @@ function renderSettingGroup(group, keys, settings, metadata) {
   `;
 }
 
+function renderCardSizeSettings() {
+  const size = getCardSize();
+
+  return `
+    <div class="card mb-3">
+      <div class="card-header">
+        <div class="d-flex align-items-center gap-3">
+          <span class="avatar avatar-sm bg-primary-lt"><i class="ti ti-layout-grid"></i></span>
+
+          <div>
+            <h3 class="card-title mb-0">Card size</h3>
+            <div class="text-secondary small">Drag to resize novel cards in the library.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
+          <label class="form-label mb-0" for="card-size-slider">Novel card size</label>
+          <span class="badge bg-secondary-lt" id="card-size-value">${size}px</span>
+        </div>
+
+        <input type="range" class="form-range" id="card-size-slider" min="${CARD_SIZE_MIN}" max="${CARD_SIZE_MAX}" step="${CARD_SIZE_STEP}" value="${size}"/>
+
+        <div class="d-flex align-items-center justify-content-between text-secondary small">
+          <span>Smaller</span>
+          <span>Larger</span>
+        </div>
+
+        <div class="alert alert-info-lt mt-3 mb-0" role="alert">
+          <div class="d-flex gap-2">
+            <i class="ti ti-info-circle"></i>
+            <div>
+              <div class="fw-semibold">Live preview</div>
+              <div class="small">The library updates while you drag. This size is saved in this browser.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderOverlaySettings() {
   const selected = new Set(getSelectedOverlayMetadata());
   const overlayOptions = CARD_METADATA.filter(metadata => metadata.overlay);
@@ -289,6 +374,7 @@ export function renderSettingsPanel() {
   const settingsContent = sortedGroupNames.map(group => renderSettingGroup(group, grouped.get(group), settings, metadata)).join('');
 
   container.innerHTML = `
+    ${renderCardSizeSettings()}
     ${renderOverlaySettings()}
     ${renderImportRowSettings()}
     ${settingsContent}
@@ -310,6 +396,21 @@ function bindSettingsEvents() {
 
   if (saveButton) {
     saveButton.addEventListener('click', saveSettings);
+  }
+
+  const cardSizeSlider = document.getElementById('card-size-slider');
+
+  if (cardSizeSlider) {
+    cardSizeSlider.addEventListener('input', () => {
+      const size = applyCardSize(cardSizeSlider.value);
+      const value = document.getElementById('card-size-value');
+
+      if (value) {
+        value.textContent = `${size}px`;
+      }
+
+      saveCardSize(size);
+    });
   }
 
   document.querySelectorAll('.settings-overlay-toggle').forEach(input => {
@@ -408,5 +509,6 @@ export function initSettingsPanel() {
 
   if (!panel) return;
 
+  applyCardSize();
   renderSettingsPanel();
 }

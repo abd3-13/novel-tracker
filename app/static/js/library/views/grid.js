@@ -14,7 +14,7 @@ let renderToken = 0;
 export function renderGrid(container, novels) {
   const token = ++renderToken;
 
-  container.innerHTML = `<div class="row row-cols-2 row-cols-md-4 row-cols-xl-6 g-3"></div>`;
+  container.innerHTML = `<div class="library-grid"></div>`;
 
   const grid = container.firstElementChild;
 
