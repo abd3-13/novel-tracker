@@ -273,8 +273,7 @@ function applyReaderTheme() {
     },
     'p, span, div, li, a': {
       'font-family': 'inherit !important'
-    },
-    img: { display: 'none' }
+    }
   });
 }
 
