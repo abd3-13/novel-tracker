@@ -14,13 +14,21 @@ class BulkSelector:
 
     table: str = Default.NOVEL_TABLE
 
+    # API jobs set this to False for non-administrators.
+    include_nsfw: bool = True
+
     # ------------------------------------------------------------------
     # Base Query
     # ------------------------------------------------------------------
 
     @property
     def _select(self) -> str:
-        return f"SELECT * FROM {self.table} WHERE COALESCE(is_deleted, 0) = 0"
+        query = f"SELECT * FROM {self.table} WHERE COALESCE(is_deleted, 0) = 0"
+
+        if not self.include_nsfw:
+            query += f" AND {db.NSFW_VISIBILITY_SQL}"
+
+        return query
 
     # ------------------------------------------------------------------
     # Helpers

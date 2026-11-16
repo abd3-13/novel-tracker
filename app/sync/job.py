@@ -43,6 +43,9 @@ class SyncJob:
     # Logging level
     log_level: LogLevel = LogLevel.NORMAL
 
+    # Whether NSFW-tagged novels may be selected (administrators only).
+    include_nsfw: bool = True
+
     # Event callbacks
     event_handler: Callable | None = None
 

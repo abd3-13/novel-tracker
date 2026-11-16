@@ -113,7 +113,10 @@ class SyncRunner:
         Select novels according to the SyncJob.
         """
 
-        selector = BulkSelector(table=job.table)
+        selector = BulkSelector(
+            table=job.table,
+            include_nsfw=job.include_nsfw,
+        )
 
         # Explicit IDs
         if job.novels:

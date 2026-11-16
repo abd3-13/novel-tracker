@@ -16,7 +16,12 @@ from flask import (
 from flask_login import current_user, login_required
 
 from app.auth import admin_required
-from app.constants import SENSITIVE_SETTING_KEYS, SETTING_METADATA, DatabaseColumn
+from app.constants import (
+    SENSITIVE_SETTING_KEYS,
+    SETTING_METADATA,
+    AuthRole,
+    DatabaseColumn,
+)
 from app.sync.job import SyncJob
 from app.sync.metadata import FIELDS
 from app.utils import db
@@ -441,6 +446,8 @@ def api_sync():
             data,
             table=db.get_user_table(current_user),
         )
+
+        job.include_nsfw = current_user.role == AuthRole.ADMIN
 
         sync_manager = current_app.extensions["sync_manager"]
 

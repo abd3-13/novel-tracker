@@ -433,6 +433,9 @@ def normalize_setting_value(value, metadata):
 # ============================================================================
 
 
+NSFW_VISIBILITY_SQL = "(tags IS NULL OR LOWER(tags) NOT LIKE '%nsfw%')"
+
+
 def _visibility_filter(role):
     """SQL fragment that hides NSFW-tagged novels from non-administrators."""
     if role == "admin":
@@ -440,7 +443,7 @@ def _visibility_filter(role):
 
     # NULL tags are safe; compare case-insensitively because imported tag
     # values are not normalized.
-    return " AND (tags IS NULL OR LOWER(tags) NOT LIKE '%nsfw%')"
+    return f" AND {NSFW_VISIBILITY_SQL}"
 
 
 def get_table(user):
