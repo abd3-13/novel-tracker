@@ -58,6 +58,64 @@ NOVEL_EDITABLE_FIELDS = {
     "discord_channel_url",
 }
 
+NOVEL_INTEGER_FIELDS = {
+    "localchap",
+    "onlinechap",
+    "characters",
+    "online_characters",
+    "progress",
+}
+
+NOVEL_BOOLEAN_FIELDS = {"epub_exists"}
+
+
+def validate_novel_updates(payload):
+    """
+    Validate and coerce editable novel fields from a PATCH payload.
+
+    Unknown keys are ignored for compatibility, but known keys must have the
+    type the database expects. Raises ValueError with a user-facing message.
+    """
+    updates = {}
+
+    for key, value in payload.items():
+        if key not in NOVEL_EDITABLE_FIELDS:
+            continue
+
+        if key in NOVEL_INTEGER_FIELDS:
+            if isinstance(value, bool):
+                raise ValueError(f"'{key}' must be a number.")
+
+            try:
+                number = int(value)
+            except (TypeError, ValueError):
+                raise ValueError(f"'{key}' must be a number.") from None
+
+            if number < 0:
+                raise ValueError(f"'{key}' cannot be negative.")
+
+            updates[key] = number
+            continue
+
+        if key in NOVEL_BOOLEAN_FIELDS:
+            if isinstance(value, bool):
+                updates[key] = int(value)
+            elif value in (0, 1, "0", "1"):
+                updates[key] = int(value)
+            else:
+                raise ValueError(f"'{key}' must be a boolean.")
+            continue
+
+        if value is not None and not isinstance(value, str):
+            raise ValueError(f"'{key}' must be a string.")
+
+        if key == "name" and (value is None or not value.strip()):
+            raise ValueError("'name' cannot be empty.")
+
+        updates[key] = value
+
+    return updates
+
 
 def build_library_novel(row):
     local_chapters = int(row[3] or 0)
@@ -224,11 +282,27 @@ def api_library_novel(novel_id):
             }
         )
 
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
 
-    updates = {
-        key: value for key, value in payload.items() if key in NOVEL_EDITABLE_FIELDS
-    }
+    if not isinstance(payload, dict):
+        return jsonify(
+            {
+                "success": False,
+                "message": "Request body must be a JSON object.",
+                "category": "warning",
+            }
+        ), 400
+
+    try:
+        updates = validate_novel_updates(payload)
+    except ValueError as exc:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(exc),
+                "category": "warning",
+            }
+        ), 400
 
     if not updates:
         return jsonify(
