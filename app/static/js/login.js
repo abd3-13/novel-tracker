@@ -5,6 +5,7 @@ import { getCoverMode, setCoverMode } from './cover.js';
 const form = document.getElementById('login-form');
 const button = form.querySelector("button[type='submit']");
 const coverModeSelect = document.getElementById('cover-mode');
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
 if (coverModeSelect) {
   coverModeSelect.value = getCoverMode();
@@ -26,6 +27,7 @@ form.addEventListener('submit', async e => {
   try {
     const response = await fetch(form.action || window.location.pathname, {
       method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken },
       body: new FormData(form)
     });
 

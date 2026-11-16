@@ -1,5 +1,15 @@
 // static/js/library/api.js
 
+function csrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.content || '';
+}
+
+// Every state-changing request must echo the session CSRF token. The server
+// rejects unsafe methods without it.
+function csrfHeaders(headers = {}) {
+  return { ...headers, 'X-CSRFToken': csrfToken() };
+}
+
 async function checkServer() {
   const status = document.querySelector("#tile_server_stat .status");
 
@@ -58,9 +68,9 @@ export async function fetchNovel(novelId) {
 export async function updateNovel(novelId, updates) {
   const response = await fetch(`/api/v1/library/${novelId}`, {
     method: 'PATCH',
-    headers: {
+    headers: csrfHeaders({
       'Content-Type': 'application/json'
-    },
+    }),
     body: JSON.stringify(updates)
   });
 
@@ -73,7 +83,8 @@ export async function updateNovel(novelId, updates) {
 
 export async function deleteNovel(novelId) {
   const response = await fetch(`/api/v1/library/${novelId}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: csrfHeaders()
   });
 
   const result = await response.json();
@@ -87,7 +98,8 @@ export async function deleteNovel(novelId) {
 
 export async function deleteMissingEpubs() {
   const response = await fetch('/api/v1/library/missing-epub', {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: csrfHeaders()
   });
 
   const result = await response.json();
@@ -145,9 +157,9 @@ export async function getSyncRegistry() {
 export async function runSync(job) {
   const response = await fetch('/api/v1/sync', {
     method: 'POST',
-    headers: {
+    headers: csrfHeaders({
       'Content-Type': 'application/json'
-    },
+    }),
     body: JSON.stringify(job)
   });
 
@@ -160,7 +172,8 @@ export async function runSync(job) {
 
 export async function cancelSync(jobId) {
   const response = await fetch(`/api/v1/sync/${jobId}/cancel`, {
-    method: 'POST'
+    method: 'POST',
+    headers: csrfHeaders()
   });
 
   const result = await response.json();
@@ -260,9 +273,9 @@ export function listenImportScan(handlers = {}) {
 export async function scanImport() {
   const response = await fetch('/api/v1/import/scan', {
     method: 'POST',
-    headers: {
+    headers: csrfHeaders({
       'Content-Type': 'application/json'
-    },
+    }),
     body: JSON.stringify({})
   });
 
@@ -278,9 +291,9 @@ export async function scanImport() {
 export async function importEpubs(filenames) {
   const response = await fetch('/api/v1/import', {
     method: 'POST',
-    headers: {
+    headers: csrfHeaders({
       'Content-Type': 'application/json'
-    },
+    }),
     body: JSON.stringify({ filenames })
   });
 
@@ -296,9 +309,9 @@ export async function importEpubs(filenames) {
 export async function streamImport(filenames, handlers = {}, signal) {
   const response = await fetch('/api/v1/import/events', {
     method: 'POST',
-    headers: {
+    headers: csrfHeaders({
       'Content-Type': 'application/json'
-    },
+    }),
     body: JSON.stringify({ filenames }),
     signal
   });
@@ -361,9 +374,9 @@ export async function streamImport(filenames, handlers = {}, signal) {
 export async function saveSetting(key, value) {
   const response = await fetch('/api/v1/settings', {
     method: 'POST',
-    headers: {
+    headers: csrfHeaders({
       'Content-Type': 'application/json'
-    },
+    }),
     body: JSON.stringify({ key, value })
   });
 

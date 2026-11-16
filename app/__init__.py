@@ -8,6 +8,7 @@ from app.cli import register_cli
 from app.config import Config
 from app.routes.importing import import_bp
 from app.routes.main import main_bp
+from app.security import init_security
 from app.sync.manager import SyncManager
 from app.utils import db
 from app.utils.filters import time_difference
@@ -37,6 +38,8 @@ def create_app(config_object=Config):
     # Initialize login manager
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"  # blueprint.endpoint
+
+    init_security(app)
 
     # Create missing tables before any request can read settings or novels.
     # Both operations are idempotent and never overwrite existing rows.

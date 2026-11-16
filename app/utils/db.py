@@ -181,7 +181,6 @@ DEFAULT_SETTINGS = {
     SettingKey.COVER_PATH: "static/img/cover/",
     SettingKey.CHECK_ERROR_LINK: "1",
     SettingKey.API_TIMEOUT: "10",
-    SettingKey.SECRETS_KEY: "",
     SettingKey.LAST_BULK_TIME: "",
     SettingKey.UPDATE_LOCAL_ONLINE: "local",
     SettingKey.EPUB_READER_FROM: "true",

@@ -136,6 +136,10 @@ export function renderHeader(library) {
   const missingNovels = library.novels.filter(novel => !novel.epub?.exists);
   const missingEpub = missingNovels.length;
 
+  const user = window.libraryUser || {};
+  const userName = user.username || 'Account';
+  const userRole = user.role ? `${user.role.charAt(0).toUpperCase()}${user.role.slice(1)}` : '';
+
   document.getElementById('library-header').innerHTML = `
       <div class="row align-items-center">
         <div class="col">
@@ -148,7 +152,7 @@ export function renderHeader(library) {
             <div class="dropdown">
               <a href="#" class="fs-1 d-flex align-items-center text-reset text-decoration-none m-0 border-0" data-bs-toggle="dropdown"><i class="avatar avatar-lg ti ti-user"></i></a>
               <div class="dropdown-menu dropdown-menu-end">
-                <div class="dropdown-header">Admin</div>
+                <div class="dropdown-header">${escapeHtml(userName)}${userRole ? `<div class="text-secondary small">${escapeHtml(userRole)}</div>` : ''}</div>
                 <a class="dropdown-item" href="#">Profile</a>
                 <div class="dropdown-divider"></div>
                 <a class="dropdown-item text-danger" href="/logout">Logout</a>

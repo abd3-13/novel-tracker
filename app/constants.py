@@ -38,6 +38,7 @@ class AuthMessage(StrEnum):
     INVALID_CREDENTIALS = "Invalid username or password."
     ACCOUNT_DISABLED_TITLE = "Account Disabled"
     ACCOUNT_DISABLED = "Your account has been disabled."
+    ADMIN_REQUIRED = "Administrator access required."
 
 
 class AuthCategory(StrEnum):
@@ -277,13 +278,6 @@ SETTING_METADATA = {
         "max": 300,
         "step": 1,
     },
-    SettingKey.SECRETS_KEY: {
-        "label": "Secret key",
-        "description": "Application secret used for protected operations.",
-        "type": "password",
-        "group": "Security",
-        "icon": "key",
-    },
     SettingKey.LAST_BULK_TIME: {
         "label": "Last bulk synchronization",
         "description": "Timestamp of the last bulk synchronization.",
@@ -331,6 +325,10 @@ SETTING_METADATA = {
         "icon": "users",
     },
 }
+
+# Settings that must never be serialized to templates or API responses.
+# Some existing databases still contain legacy rows for these keys.
+SENSITIVE_SETTING_KEYS = frozenset({SettingKey.SECRETS_KEY})
 
 
 # =============================================================================

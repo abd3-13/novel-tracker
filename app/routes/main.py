@@ -14,13 +14,24 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
-from app.constants import SETTING_METADATA, DatabaseColumn
+from app.auth import admin_required
+from app.constants import SENSITIVE_SETTING_KEYS, SETTING_METADATA, DatabaseColumn
 from app.sync.job import SyncJob
 from app.sync.metadata import FIELDS
 from app.utils import db
 from app.utils.filters import log_SpamFilter
 
 main_bp = Blueprint("main", __name__)
+
+
+def public_settings():
+    """Settings safe to render in pages and API responses."""
+    return {
+        key: value
+        for key, value in db.get_settings_dict().items()
+        if key not in SENSITIVE_SETTING_KEYS
+    }
+
 
 NOVEL_EDITABLE_FIELDS = {
     "name",
@@ -109,10 +120,12 @@ for logger_name in ["werkzeug", "gunicorn.access", "gunicorn.error"]:
 @main_bp.route("/")
 @login_required
 def index():
-    settings = db.get_settings_dict()
-
     return render_template(
-        "library.html", settings=settings, settings_metadata=SETTING_METADATA
+        "library.html",
+        settings=public_settings(),
+        settings_metadata=SETTING_METADATA,
+        current_username=current_user.username,
+        current_role=current_user.role,
     )
 
 @main_bp.route('/status')
@@ -250,83 +263,82 @@ def api_library_novel(novel_id):
     )
 
 
-@main_bp.route("/api/v1/settings", methods=["POST", "GET"])
+@main_bp.get("/api/v1/settings")
 @login_required
-def api_save_setting():
+def api_get_settings():
+    metadata = {
+        key: {"key": key, **definition}
+        for key, definition in SETTING_METADATA.items()
+    }
 
-    if request.method == "POST":
-        payload = request.get_json(silent=True) or {}
-
-        key = payload.get("key")
-        value = payload.get("value")
-
-        if not key:
-            return jsonify(
-                {
-                    "success": False,
-                    "message": "Setting key is required.",
-                    "category": "warning",
-                }
-            ), 400
-
-        metadata = SETTING_METADATA.get(key)
-
-        if metadata is None:
-            return jsonify(
-                {
-                    "success": False,
-                    "message": f"Unknown setting: {key}.",
-                    "category": "warning",
-                }
-            ), 400
-
-        if metadata.get("readonly"):
-            return jsonify(
-                {
-                    "success": False,
-                    "message": f"Setting '{key}' is read-only.",
-                    "category": "warning",
-                }
-            ), 400
-
-        try:
-            normalized_value = db.normalize_setting_value(value, metadata)
-        except ValueError as exc:
-            return jsonify(
-                {
-                    "success": False,
-                    "message": str(exc),
-                    "category": "warning",
-                }
-            ), 400
-
-        db.save_setting(key, normalized_value)
-
-        return jsonify(
-            {
-                "success": True,
-                "message": "Setting saved.",
-                "category": "success",
-                "data": {
-                    key: db.get_value(key),
-                },
-            }
-        )
-    if request.method == "GET":
-        settings = db.get_settings_dict()
-
-        metadata = {
-            key: {"key": key, **definition}
-            for key, definition in SETTING_METADATA.items()
+    return jsonify(
+        {
+            "data": public_settings(),
+            "metadata": metadata,
         }
+    )
 
+
+@main_bp.post("/api/v1/settings")
+@admin_required
+def api_save_setting():
+    payload = request.get_json(silent=True) or {}
+
+    key = payload.get("key")
+    value = payload.get("value")
+
+    if not key:
         return jsonify(
             {
-                "data": settings,
-                "metadata": metadata,
+                "success": False,
+                "message": "Setting key is required.",
+                "category": "warning",
             }
-        )
-    return jsonify(), 405
+        ), 400
+
+    metadata = SETTING_METADATA.get(key)
+
+    if metadata is None:
+        return jsonify(
+            {
+                "success": False,
+                "message": f"Unknown setting: {key}.",
+                "category": "warning",
+            }
+        ), 400
+
+    if metadata.get("readonly"):
+        return jsonify(
+            {
+                "success": False,
+                "message": f"Setting '{key}' is read-only.",
+                "category": "warning",
+            }
+        ), 400
+
+    try:
+        normalized_value = db.normalize_setting_value(value, metadata)
+    except ValueError as exc:
+        return jsonify(
+            {
+                "success": False,
+                "message": str(exc),
+                "category": "warning",
+            }
+        ), 400
+
+    db.save_setting(key, normalized_value)
+
+    return jsonify(
+        {
+            "success": True,
+            "message": "Setting saved.",
+            "category": "success",
+            "data": {
+                key: db.get_value(key),
+            },
+        }
+    )
 
 
 @main_bp.route("/api/v1/sync/registry")

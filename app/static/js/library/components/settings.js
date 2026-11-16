@@ -5,6 +5,10 @@ import { IMPORT_METADATA, getSelectedImportMetadata, saveSelectedImportMetadata 
 
 const OVERLAY_STORAGE_KEY = 'library.cardOverlayMetadata';
 
+// Only administrators may change library-wide settings. Everyone else keeps
+// the per-browser options (card size, overlay, import rows).
+const IS_ADMIN = window.libraryUser?.role === 'admin';
+
 const CARD_SIZE_STORAGE_KEY = 'library.cardSize';
 const DEFAULT_CARD_SIZE = 150;
 const CARD_SIZE_MIN = 100;
@@ -379,14 +383,32 @@ export function renderSettingsPanel() {
     ${renderImportRowSettings()}
     ${settingsContent}
 
-    <div class="settings-save-bar">
+    ${
+      IS_ADMIN
+        ? `<div class="settings-save-bar">
       <div class="d-flex align-items-center justify-content-between gap-3">
         <div class="text-secondary small"><i class="ti ti-database me-1"></i>Database settings are saved explicitly.</div>
 
         <button type="button" class="btn btn-primary" id="save-settings"><i class="ti ti-device-floppy me-1"></i>Save settings</button>
       </div>
-    </div>
+    </div>`
+        : `<div class="alert alert-info-lt mb-3" role="alert">
+      <div class="d-flex gap-2">
+        <i class="ti ti-lock"></i>
+        <div>
+          <div class="fw-semibold">Read-only settings</div>
+          <div class="small">Only administrators can change library-wide settings.</div>
+        </div>
+      </div>
+    </div>`
+    }
   `;
+
+  if (!IS_ADMIN) {
+    container.querySelectorAll('.settings-field').forEach(field => {
+      field.disabled = true;
+    });
+  }
 
   bindSettingsEvents();
 }
