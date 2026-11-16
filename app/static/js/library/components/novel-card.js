@@ -4,7 +4,7 @@ import { STATUS_STYLE } from './../config.js';
 import { getSelectedOverlayMetadata } from './settings.js';
 import { CARD_METADATA } from './card-metadata.js';
 import { openNovelSync } from './sync.js';
-import { escapeHtml } from './../utils.js';
+import { escapeHtml, safeUrl } from './../utils.js';
 import { deleteNovel } from './../api.js';
 import { openNovelEdit } from './edit.js';
 import { openNovelReader } from './../views/epub_reader.js';
@@ -13,7 +13,7 @@ import { getNovelCoverSrc } from './../../cover.js';
 function renderMeta(icon, value, title = '') {
   if (value === null || value === undefined || value === '' || value === 0 || value === '0' || value === '0/0') return '';
 
-  return `<div class="nt-meta-item" title="${title}"><i class="ti ti-${icon}"></i><span>${value}</span></div>`;
+  return `<div class="nt-meta-item" title="${escapeHtml(title)}"><i class="ti ti-${icon}"></i><span>${escapeHtml(value)}</span></div>`;
 }
 
 function renderTags(tags) {
@@ -30,7 +30,7 @@ function renderTags(tags) {
 
   return `<div class="nt-card-tags">${values
     .slice(0, 8)
-    .map(tag => `<span class="badge bg-white-lt">${tag}</span>`)
+    .map(tag => `<span class="badge bg-white-lt">${escapeHtml(tag)}</span>`)
     .join('')}</div>`;
 }
 
@@ -70,8 +70,8 @@ function showDeleteNovelDialog(novel) {
 
         <div class="modal-body">
           <p class="mb-2">Are you sure you want to delete this novel?</p>
-          <div class="text-secondary small text-truncate" title="${novel.title}">
-            ${novel.title}
+          <div class="text-secondary small text-truncate" title="${escapeHtml(novel.title)}">
+            ${escapeHtml(novel.title)}
           </div>
           <div class="text-danger small mt-2">
             <i class="ti ti-alert-triangle me-1"></i>
@@ -155,8 +155,8 @@ function buildNovelLinksModal() {
 }
 
 function showNovelLinksDialog(novel) {
-  const sourceUrl = novel.source?.url;
-  const discordUrl = novel.discord_channel_url;
+  const sourceUrl = safeUrl(novel.source?.url, '');
+  const discordUrl = safeUrl(novel.discord_channel_url, '');
 
   if (!sourceUrl && !discordUrl) return;
 
@@ -189,7 +189,7 @@ function showNovelLinksDialog(novel) {
             ${
               sourceUrl
                 ? `
-                  <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary"><i class="ti ti-world me-2"></i>${novel.source?.name || 'Source'}</a>
+                  <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary"><i class="ti ti-world me-2"></i>${escapeHtml(novel.source?.name || 'Source')}</a>
                 `
                 : ''
             }
@@ -197,7 +197,7 @@ function showNovelLinksDialog(novel) {
             ${
               discordUrl
                 ? `
-                  <a href="${discordUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary"><i class="ti ti-brand-discord me-2"></i>Author Discord</a>
+                  <a href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary"><i class="ti ti-brand-discord me-2"></i>Author Discord</a>
                 `
                 : ''
             }

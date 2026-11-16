@@ -59,3 +59,17 @@ export function escapeHtml(value) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+// Only http(s) URLs may reach an href or window.open(). Novel metadata comes
+// from external files, so a "javascript:" URL must never become a link.
+export function safeUrl(value, fallback = '#') {
+  if (!value) return fallback;
+
+  try {
+    const url = new URL(String(value), window.location.origin);
+
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : fallback;
+  } catch {
+    return fallback;
+  }
+}

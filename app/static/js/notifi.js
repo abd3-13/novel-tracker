@@ -1,3 +1,5 @@
+import { escapeHtml } from './library/utils.js';
+
 const typeMap = {
   success: 'alert-success',
   error: 'alert-danger',
@@ -42,8 +44,8 @@ export function showNotification(message, category = 'info', title, delay) {
   alert.innerHTML = `
     <div class="alert-icon"><i class="icon ti ${icon}"></i></div>
        <div>
-         <h4 class="alert-heading">${heading}</h4>
-         <div class="alert-description">${message}</div>
+         <h4 class="alert-heading">${escapeHtml(heading)}</h4>
+         <div class="alert-description">${escapeHtml(message)}</div>
        </div>
        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;

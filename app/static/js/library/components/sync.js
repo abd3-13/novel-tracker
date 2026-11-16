@@ -2,6 +2,7 @@ import { getLibrarySyncIds } from '../state.js';
 import { getSyncRegistry, runSync, cancelSync, listenSyncProgress } from './../api.js';
 import { showNotification } from './../../notifi.js';
 import { SYNC_TEXT, SYNC_BUTTON_STATES, SYNC_CANCEL_BUTTON_STATES } from './../config.js';
+import { escapeHtml } from './../utils.js';
 // Global state
 const syncConfig = {
   source: 'local',
@@ -195,8 +196,8 @@ async function renderMetadata() {
             const isdisabled = isFieldDisabled(field, source);
             return `
               <label class="form-selectgroup-item">
-                <input type="checkbox" class="form-selectgroup-input sync-field" value="${field.id}" ${isdisabled ? 'disabled' : ''}>
-                <span class="form-selectgroup-label d-flex align-items-center px-3"> <i class="ti ti-${field.icon} me-2"></i>${field.name}</span>
+                <input type="checkbox" class="form-selectgroup-input sync-field" value="${escapeHtml(field.id)}" ${isdisabled ? 'disabled' : ''}>
+                <span class="form-selectgroup-label d-flex align-items-center px-3"> <i class="ti ti-${escapeHtml(field.icon)} me-2"></i>${escapeHtml(field.name)}</span>
               </label>
             `;
           })
@@ -490,12 +491,12 @@ function renderSyncProblems(results) {
         <i class="ti ti-${icon} ${css} mt-1 flex-shrink-0"></i>
 
         <div class="min-width-0 flex-fill">
-          <div class="fw-semibold text-truncate" title="${problem.title}">
-            ${problem.title}
+          <div class="fw-semibold text-truncate" title="${escapeHtml(problem.title)}">
+            ${escapeHtml(problem.title)}
           </div>
 
           <div class="text-muted small text-break">
-            ${problem.message}
+            ${escapeHtml(problem.message)}
           </div>
         </div>
       </div>
