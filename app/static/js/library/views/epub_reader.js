@@ -114,7 +114,9 @@ async function loadEPUB(novelID) {
 
     epubBook.loaded.metadata.then(metadata => { if (myToken !== loadToken) return; updateBookMetadata(metadata); });
 
-    epubRendition = epubBook.renderTo(viewer, {width: '100%', height: '100%', flow: 'scrolled', allowScriptedContent: true});
+    // EPUBs are untrusted input. Allowing scripts here would let a crafted
+    // book run JavaScript in the application's origin and read the session.
+    epubRendition = epubBook.renderTo(viewer, {width: '100%', height: '100%', flow: 'scrolled', allowScriptedContent: false});
 
     await epubBook.loaded;
 
