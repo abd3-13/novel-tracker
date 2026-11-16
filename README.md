@@ -23,6 +23,37 @@ It currently includes:
 - 🌙 **Dark UI** — Because obviously.
 - 📱 **Responsive interface** — The library should remain usable at different screen sizes.
 
+## Setup
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Create missing tables and default settings (safe on an existing database)
+flask --app app.py init-db
+
+# Create the first account
+flask --app app.py create-user admin --role admin
+
+# Run locally
+flask --app app.py run --debug
+```
+
+Configuration is read from the environment:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `SECRET_KEY` | ephemeral dev key | Session signing. Required when `APP_ENV=production`. |
+| `APP_ENV` | `development` | `production` requires a real secret and enables secure cookies. |
+| `DATABASE_PATH` | `data/my-novels.db` | SQLite database location. |
+| `NOVEL_DATA_DIR` | `data/` | Base directory used when `DATABASE_PATH` is not set. |
+| `HOST` / `PORT` | `127.0.0.1` / `5000` | Development server binding. |
+| `SESSION_COOKIE_SECURE` | `1` in production | Set to `1` when serving over HTTPS. |
+
+`flask --app app.py init-db` is additive: it creates missing tables and
+settings and leaves existing library data untouched.
+
 ## Why V2?
 
 The first version worked, but as features were added, the codebase became harder to work with.

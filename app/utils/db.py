@@ -14,14 +14,16 @@ Higher-level business logic belongs elsewhere.
 import json
 import os
 import sqlite3
+from pathlib import Path
 
+from app.config import DATABASE_PATH
 from app.constants import SETTING_METADATA, Default, MetadataKey, SettingKey
-from app.utils.tools import find_database_file, normalize_title
+from app.utils.tools import normalize_title
 
 # ============================================================================
 # Constants
 # ============================================================================
-DEFAULT_DB = find_database_file()
+DEFAULT_DB = str(DATABASE_PATH)
 DEFAULT_TABLE = Default.NOVEL_TABLE
 
 # ============================================================================
@@ -32,15 +34,19 @@ DEFAULT_TABLE = Default.NOVEL_TABLE
 def get_conn(row_factory=False):
     """
     Create a SQLite connection.
+
     Parameters
     ----------
     row_factory
       When True, rows are returned as sqlite3.Row objects.
+
     Returns
     -------
     sqlite3.Connection
     """
+    Path(DEFAULT_DB).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DEFAULT_DB)
+    conn.execute("PRAGMA busy_timeout = 5000")
     if row_factory:
         conn.row_factory = sqlite3.Row
     return conn
@@ -112,91 +118,111 @@ def fetch_all(query, params=(), close=False, row_factory=False):
 # ============================================================================
 
 
+NOVEL_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS {table} (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  url TEXT,
+  localchap INTEGER DEFAULT 0,
+  onlinechap INTEGER DEFAULT 0,
+  latestchaptime TEXT,
+  status TEXT,
+  source TEXT,
+  notes TEXT,
+  filepath TEXT,
+  created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  last_updated TEXT,
+  updated_count INTEGER DEFAULT 0,
+  epub_exists INTEGER,
+  author TEXT,
+  description TEXT,
+  tags TEXT,
+  characters INTEGER NOT NULL DEFAULT 0,
+  online_characters INTEGER NOT NULL DEFAULT 0,
+  cover_path TEXT,
+  local_lastchaptitle TEXT,
+  local_lastchapfile TEXT,
+  progress INTEGER NOT NULL DEFAULT 0,
+  progress_updated DATETIME,
+  discord_channel_url TEXT,
+  is_deleted INTEGER NOT NULL DEFAULT 0
+)
+"""
+
+SETTINGS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS settings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  key TEXT NOT NULL UNIQUE,
+  value TEXT
+)
+"""
+
+USERS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE NOT NULL,
+  email TEXT,
+  password_hash TEXT NOT NULL,
+  role TEXT DEFAULT 'user',
+  active INTEGER DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+"""
+
+DEFAULT_SETTINGS = {
+    SettingKey.DB_PATH: "my-novels.db",
+    SettingKey.ENDPOINT: "",
+    SettingKey.IMG_ENDPOINT: "",
+    SettingKey.USER_AGENT: "",
+    SettingKey.REFER_URL: "",
+    SettingKey.DELAY_FROM: "1",
+    SettingKey.DELAY_TO: "3",
+    SettingKey.LOCAL_EPUB_DIR: "novels/",
+    SettingKey.COVER_PATH: "static/img/cover/",
+    SettingKey.CHECK_ERROR_LINK: "1",
+    SettingKey.API_TIMEOUT: "10",
+    SettingKey.SECRETS_KEY: "",
+    SettingKey.LAST_BULK_TIME: "",
+    SettingKey.UPDATE_LOCAL_ONLINE: "local",
+    SettingKey.EPUB_READER_FROM: "true",
+    SettingKey.MOON_PROGRESS_FILE: "/data/data/com.flyersoft.moonreaderp/shared_prefs/positions10.xml",
+    SettingKey.CHARAC_API: "https://idruid.webnovel.com/go/api/book-role",
+}
+
+_settings_cache: dict[str, str] | None = None
+
+
 def init_db():
     """
-    Initialize the application database.
-    Creates all required tables if they do not exist and inserts the
-    default application settings.
+    Create every application table and insert default settings.
+
+    This is idempotent: existing rows are preserved, including settings.
+    Call it from the app factory or the ``init-db`` CLI command.
     """
+    global _settings_cache
+
     conn = get_conn()
-    cur = conn.cursor()
-    # ------------------------------------------------------------------
-    # Novels
-    # ------------------------------------------------------------------
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS novels (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE,
-      url TEXT,
-      localchap INTEGER DEFAULT 0,
-      onlinechap INTEGER DEFAULT 0,
-      latestchaptime TEXT,
-      status TEXT,
-      source TEXT,
-      notes TEXT,
-      filepath TEXT,
-      created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_updated TEXT,
-      updated_count INTEGER DEFAULT 0,
-      epub_exists INTEGER,
-      author TEXT,
-      description TEXT,
-      tags TEXT,
-      characters INTEGER NOT NULL DEFAULT 0,
-      online_characters INTEGER NOT NULL DEFAULT 0,
-      cover_path TEXT,
-      local_lastchaptitle TEXT,
-      local_lastchapfile TEXT,
-      progress INTEGER NOT NULL DEFAULT 0,
-      progress_updated DATETIME,
-      discord_channel_url TEXT,
-      is_deleted INTEGER NOT NULL DEFAULT 0,
-    )
-  """)
-    # ------------------------------------------------------------------
-    # Settings
-    # ------------------------------------------------------------------
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS settings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      key TEXT NOT NULL UNIQUE,
-      value TEXT
-    )
-  """)
-    # ------------------------------------------------------------------
-    # Default Settings
-    # ------------------------------------------------------------------
-    default_settings = {
-        SettingKey.DB_PATH: "my-novels.db",
-        SettingKey.ENDPOINT: "",
-        SettingKey.IMG_ENDPOINT: "",
-        SettingKey.USER_AGENT: "",
-        SettingKey.REFER_URL: "",
-        SettingKey.DELAY_FROM: "1",
-        SettingKey.DELAY_TO: "3",
-        SettingKey.LOCAL_EPUB_DIR: "novels/",
-        SettingKey.COVER_PATH: "static/img/cover/",
-        SettingKey.CHECK_ERROR_LINK: "1",
-        SettingKey.API_TIMEOUT: "10",
-        SettingKey.SECRETS_KEY: "",
-        SettingKey.LAST_BULK_TIME: "",
-        SettingKey.UPDATE_LOCAL_ONLINE: "local",
-        SettingKey.EPUB_READER_FROM: "true",
-        SettingKey.MOON_PROGRESS_FILE: "/data/data/com.flyersoft.moonreaderp/shared_prefs/positions10.xml",
-        SettingKey.CHARAC_API: "https://idruid.webnovel.com/go/api/book-role",
-    }
-    for key, value in default_settings.items():
-        cur.execute(
-            """
-      INSERT INTO settings(key, value)
-      VALUES(?, ?)
-      ON CONFLICT(key)
-      DO UPDATE SET value = excluded.value
-    """,
-            (key, value),
-        )
-    conn.commit()
-    conn.close()
+    try:
+        cur = conn.cursor()
+
+        for table in (Default.NOVEL_TABLE, Default.DEMO_NOVEL_TABLE):
+            cur.execute(NOVEL_TABLE_SQL.format(table=table))
+
+        cur.execute(SETTINGS_TABLE_SQL)
+        cur.execute(USERS_TABLE_SQL)
+
+        for key, value in DEFAULT_SETTINGS.items():
+            cur.execute(
+                "INSERT INTO settings(key, value) VALUES(?, ?) "
+                "ON CONFLICT(key) DO NOTHING",
+                (key, value),
+            )
+
+        conn.commit()
+    finally:
+        conn.close()
+
+    _settings_cache = None
 
 
 def ensure_schema():
@@ -237,21 +263,7 @@ def init_users_table():
     """
     Create the user table.
     """
-    execute(
-        """
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      email TEXT,
-      password_hash TEXT NOT NULL,
-      role TEXT DEFAULT 'user',
-      active INTEGER DEFAULT 1,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  """,
-        commit=True,
-        close=True,
-    )
+    execute(USERS_TABLE_SQL, commit=True, close=True)
 
 
 # ============================================================================
@@ -261,16 +273,18 @@ def init_users_table():
 
 def load_settings():
     """
-    Load all application settings into memory.
+    Load all application settings from the database.
+
     Returns
     -------
     dict
       Dictionary of setting key -> value.
     """
-    print("RUN: load_settings()")
     conn = get_conn(row_factory=True)
-    rows = conn.execute("SELECT key, value FROM settings").fetchall()
-    conn.close()
+    try:
+        rows = conn.execute("SELECT key, value FROM settings").fetchall()
+    finally:
+        conn.close()
     return {row["key"]: row["value"] for row in rows}
 
 
@@ -284,9 +298,14 @@ def list_setting_rows():
 
 def get_settings_dict():
     """
-    Return the cached settings dictionary.
+    Return the cached settings dictionary, loading it on first use.
     """
-    return settings_dict
+    global _settings_cache
+
+    if _settings_cache is None:
+        _settings_cache = load_settings()
+
+    return _settings_cache
 
 
 def get_setting_metadata(key):
@@ -327,23 +346,33 @@ def get_value(key, default=None):
     default
       Returned when the key is not found.
     """
-    return settings_dict.get(key, default)
+    return get_settings_dict().get(key, default)
 
 
 def save_setting(key, value):
     """
     Save a setting.
-    The in-memory cache is updated immediately before writing
-    to the database.
+
+    The in-memory cache is updated immediately before writing to the database.
+    Unknown keys are inserted so newly added settings persist without a manual
+    schema migration.
     """
     if not isinstance(value, str):
         value = json.dumps(value)
 
-    if settings_dict.get(key) == value:
+    settings = get_settings_dict()
+
+    if settings.get(key) == value:
         return
-    settings_dict[key] = value
+
+    settings[key] = value
+
     execute(
-        "UPDATE settings SET value=? WHERE key=?", (value, key), commit=True, close=True
+        "INSERT INTO settings(key, value) VALUES(?, ?) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        (key, value),
+        commit=True,
+        close=True,
     )
 
 
@@ -605,11 +634,10 @@ def get_user_table(user):
 
 
 # ============================================================================
-# Module Initialization
+# Module entry point
 # ============================================================================
-settings_dict = load_settings()
-ensure_schema()
 
 if __name__ == "__main__":
     init_db()
-    print("Database initialized.")
+    ensure_schema()
+    print(f"Database initialized: {DEFAULT_DB}")

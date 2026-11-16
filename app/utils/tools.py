@@ -32,14 +32,6 @@ progress_lock = Lock()
 bulk_run_lock = Lock()
 
 
-def find_database_file(filename="data/my-novels.db"):
-    # Scan the current directory for the specified database file
-    for root, dirs, files in os.walk(os.getcwd()):
-        if filename in files:
-            return filename
-    return filename  # Return defualt if not found
-
-
 def timer(func):
     @wraps(func)
     def wrapper(*args, **kwargs):

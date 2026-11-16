@@ -1,0 +1,1 @@
+"""WebNovel metadata provider."""

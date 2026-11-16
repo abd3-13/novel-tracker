@@ -4,10 +4,12 @@ from flask import Flask
 from flask_login import LoginManager
 
 from app.auth import auth_bp, load_user
+from app.cli import register_cli
 from app.config import Config
 from app.routes.importing import import_bp
 from app.routes.main import main_bp
 from app.sync.manager import SyncManager
+from app.utils import db
 from app.utils.filters import time_difference
 
 login_manager = LoginManager()
@@ -36,10 +38,17 @@ def create_app(config_object=Config):
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"  # blueprint.endpoint
 
+    # Create missing tables before any request can read settings or novels.
+    # Both operations are idempotent and never overwrite existing rows.
+    db.init_db()
+    db.ensure_schema()
+
     # Register blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(import_bp)
+
+    register_cli(app)
 
     # Register template filters
     app.add_template_filter(time_difference, name="time_difference")

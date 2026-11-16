@@ -30,22 +30,32 @@ from app.utils.tools import (
 
 logger = logging.getLogger(__name__)
 
-MAX_TIMEOUT = int(db.get_value(SettingKey.API_TIMEOUT) or 10)
+def _max_timeout() -> int:
+    return int(db.get_value(SettingKey.API_TIMEOUT) or 10)
 
-API_BASE = db.get_value(SettingKey.CHARAC_API)
-IMG_ENDPOINT = db.get_value(SettingKey.IMG_ENDPOINT)
 
-CHARACTER_HEADERS = {
-    WebnovelHeader.USER_AGENT.value: db.get_value(SettingKey.USER_AGENT),
-    WebnovelHeader.REFERER.value: db.get_value(SettingKey.REFER_URL),
-    WebnovelHeader.ARCANE.value: "001030brn5eb4rAuzLLDkrMV01qxQrbDmK0wsxXjcxcJwojV95Br0af+FCtWlRsQolF/2HmbHo7jOaKWHuSxjjFexOlUf9zF6LGQLGyGnTv5I9Boj+pzAmOC5wPQEZ2r6RYrHaqvmQ/rt+AqyqHRxWMa5zOv540mOGSz/U143WnI8j/ag=",
-}
+def _api_base() -> str:
+    return db.get_value(SettingKey.CHARAC_API) or ""
 
-CLIENT_HEADERS = {
-    WebnovelHeader.USER_AGENT.value: db.get_value(SettingKey.USER_AGENT),
-    WebnovelHeader.ACCEPT.value: "application/json",
-    WebnovelHeader.REFERER.value: db.get_value(SettingKey.REFER_URL),
-}
+
+def _img_endpoint() -> str:
+    return db.get_value(SettingKey.IMG_ENDPOINT) or ""
+
+
+def _character_headers() -> dict[str, str]:
+    return {
+        WebnovelHeader.USER_AGENT.value: db.get_value(SettingKey.USER_AGENT) or "",
+        WebnovelHeader.REFERER.value: db.get_value(SettingKey.REFER_URL) or "",
+        WebnovelHeader.ARCANE.value: "001030brn5eb4rAuzLLDkrMV01qxQrbDmK0wsxXjcxcJwojV95Br0af+FCtWlRsQolF/2HmbHo7jOaKWHuSxjjFexOlUf9zF6LGQLGyGnTv5I9Boj+pzAmOC5wPQEZ2r6RYrHaqvmQ/rt+AqyqHRxWMa5zOv540mOGSz/U143WnI8j/ag=",
+    }
+
+
+def _client_headers() -> dict[str, str]:
+    return {
+        WebnovelHeader.USER_AGENT.value: db.get_value(SettingKey.USER_AGENT) or "",
+        WebnovelHeader.ACCEPT.value: "application/json",
+        WebnovelHeader.REFERER.value: db.get_value(SettingKey.REFER_URL) or "",
+    }
 
 BOOK_ID_PATTERNS = (
     re.compile(r"_(\d{8,})$"),
@@ -106,7 +116,7 @@ class WebnovelClient:
         )
 
         response = self.session.get(
-            endpoint, headers=CLIENT_HEADERS, timeout=MAX_TIMEOUT
+            endpoint, headers=_client_headers(), timeout=_max_timeout()
         )
         response.raise_for_status()
 
@@ -148,10 +158,10 @@ class WebnovelClient:
 
     def get_character_list(self, book_id: str) -> list[CharacterInfo]:
         data = http_get(
-            f"{API_BASE}/list",
+            f"{_api_base()}/list",
             {WebnovelJsonKey.BOOK_ID: book_id},
-            headers=CHARACTER_HEADERS,
-            timeout=MAX_TIMEOUT,
+            headers=_character_headers(),
+            timeout=_max_timeout(),
         )
         if not data or data.get(WebnovelJsonKey.MESSAGE) != WebnovelJsonKey.SUCCESS:
             return []
@@ -172,10 +182,10 @@ class WebnovelClient:
 
     def get_character_detail(self, book_id: str, role_id: str) -> CharacterInfo | None:
         data = http_get(
-            f"{API_BASE}/detail",
+            f"{_api_base()}/detail",
             {WebnovelJsonKey.BOOK_ID: book_id, WebnovelJsonKey.ROLE_ID_FIELD: role_id},
-            headers=CHARACTER_HEADERS,
-            timeout=MAX_TIMEOUT,
+            headers=_character_headers(),
+            timeout=_max_timeout(),
         )
         if not data or data.get(WebnovelJsonKey.MESSAGE) != WebnovelJsonKey.SUCCESS:
             return None
@@ -194,7 +204,7 @@ class WebnovelClient:
 
         logger.debug("Downloading cover for %s", book_id)
 
-        url = f"{IMG_ENDPOINT}/cover?{WebnovelJsonKey.BOOK_ID}={book_id}"
+        url = f"{_img_endpoint()}/cover?{WebnovelJsonKey.BOOK_ID}={book_id}"
 
         cover = download_image(
             url=url,
