@@ -117,9 +117,13 @@ def sync_cover_asset(ctx, field: MetadataField):
     overwrite = ctx.job.mode == SyncMode.OVERWRITE
     cover_id = provider.fetch_cover(overwrite=overwrite)
     if cover_id:
-        ctx.collector.set(field.column, cover_id)
+        # The field id is "fetch_cover" so the UI can request this action, but
+        # the resulting filename belongs in the novel's cover_path column.
+        ctx.collector.set(DatabaseColumn.COVER, cover_id)
 
-    ctx.emit(Event.FIELD, field=field.column, name=field.name, value=cover_id)
+    ctx.emit(
+        Event.FIELD, field=DatabaseColumn.COVER, name=field.name, value=cover_id
+    )
 
 
 def sync_character_assets(ctx, field: MetadataField):

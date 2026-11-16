@@ -205,25 +205,32 @@ class WebnovelClient:
 
         url = f"{_img_endpoint()}/cover?{WebnovelJsonKey.BOOK_ID}={book_id}"
 
+        cover_dir = Path(
+            db.get_value(SettingKey.COVER_PATH) or DefaultValue.CURRENT_COVER_DIR
+        )
+        filename = f"{book_id}.cover"
         cover = download_image(
             url=url,
-            filename=f"{book_id}.cover",
-            folder=Path(
-                db.get_value(SettingKey.COVER_PATH) or DefaultValue.CURRENT_DIR
-            ),
+            filename=filename,
+            folder=cover_dir,
             dry_run=False,
         )
-        cover_file = (
-            Path(db.get_value(SettingKey.COVER_PATH) or DefaultValue.CURRENT_DIR)
-            / f"{book_id}.webp"
-        )
-        if cover:
-            logger.info("Downloaded cover: %s", cover)
-            convert_to_webp(image_path=cover_file, overwrite=overwrite)
-        else:
-            logger.warning("Cover download failed: %s", book_id)
 
-        return cover
+        if not cover:
+            logger.warning("Cover download failed: %s", book_id)
+            return None
+
+        converted = convert_to_webp(
+            image_path=cover_dir / filename,
+            overwrite=overwrite,
+        )
+
+        if converted is None:
+            logger.warning("Failed to convert cover to WebP: %s", book_id)
+            return None
+
+        logger.info("Cover ready: %s", converted)
+        return converted.name
 
 
 def normalize_character(data: dict) -> CharacterInfo:
