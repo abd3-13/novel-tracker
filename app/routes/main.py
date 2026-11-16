@@ -1,5 +1,6 @@
 import json
 import logging
+from queue import Empty
 
 from flask import (
     Blueprint,
@@ -461,6 +462,41 @@ def api_sync_cancel(job_id):
     )
 
 
+def _sync_event_stream(execution, timeout=15):
+    """Yield SSE frames for one synchronization execution."""
+    while True:
+        try:
+            event = execution.events.get(timeout=timeout)
+        except Empty:
+            if execution.done:
+                yield f"event: done\ndata: {json.dumps(execution.snapshot())}\n\n"
+                break
+
+            yield ": keep-alive\n\n"
+            continue
+
+        # No more events
+        if event is None:
+            yield f"event: done\ndata: {json.dumps(execution.snapshot())}\n\n"
+            break
+
+        try:
+            data = json.dumps(event.data)
+        except (TypeError, ValueError):
+            current_app.logger.exception(
+                "Failed to serialize synchronization event '%s'.", event.type
+            )
+            payload = {
+                "message": "Failed to serialize synchronization event.",
+                "event": event.type,
+            }
+
+            yield f"event: error\ndata: {json.dumps(payload)}\n\n"
+            break
+
+        yield f"event: {event.type}\ndata: {data}\n\n"
+
+
 @main_bp.route("/api/v1/sync/<job_id>/events", methods=["GET"])
 @login_required
 def api_sync_events(job_id):
@@ -477,31 +513,8 @@ def api_sync_events(job_id):
             }
         ), 404
 
-    def event_stream():
-        while True:
-            event = execution.events.get()
-
-            # No more events
-            if event is None:
-                yield (f"event: done\ndata: {json.dumps(execution.snapshot())}\n\n")
-                break
-
-            try:
-                data = json.dumps(event.data)
-            except (TypeError, ValueError):
-                current_app.logger.exception(
-                    "Failed to serialize synchronization event '%s'.", event.type
-                )
-
-                yield (
-                    "event: error\ndata: {json.dumps({'message': 'Failed to serialize synchronization event.', 'event': event.type})}\n\n"
-                )
-                break
-
-            yield f"event: {event.type}\ndata: {data}\n\n"
-
     return Response(
-        stream_with_context(event_stream()),
+        stream_with_context(_sync_event_stream(execution)),
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
