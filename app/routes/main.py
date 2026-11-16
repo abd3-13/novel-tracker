@@ -182,7 +182,7 @@ def api_delete_missing_epubs():
 @login_required
 def api_library_novel(novel_id):
     table = db.get_user_table(current_user)
-    row = db.get_novel(novel_id, table=table)
+    row = db.get_novel(novel_id, table=table, user=current_user)
 
     if row is None:
         return jsonify(
@@ -251,7 +251,7 @@ def api_library_novel(novel_id):
             }
         ), 500
 
-    updated = db.get_novel(novel_id, table=table)
+    updated = db.get_novel(novel_id, table=table, user=current_user)
 
     return jsonify(
         {
@@ -521,6 +521,7 @@ def serve_epub(novelID):
         db.get_user_table(current_user),
         DatabaseColumn.FILEPATH.value,
         row_factory=False,
+        user=current_user,
     )
 
     if isinstance(filename, (tuple, list)):

@@ -433,20 +433,29 @@ def normalize_setting_value(value, metadata):
 # ============================================================================
 
 
+def _visibility_filter(role):
+    """SQL fragment that hides NSFW-tagged novels from non-administrators."""
+    if role == "admin":
+        return ""
+
+    # NULL tags are safe; compare case-insensitively because imported tag
+    # values are not normalized.
+    return " AND (tags IS NULL OR LOWER(tags) NOT LIKE '%nsfw%')"
+
+
 def get_table(user):
     """
     Return all active novels from a table, based on user and role.
 
-    Soft-deleted rows are never returned to the application.
+    Soft-deleted rows are never returned to the application, and NSFW-tagged
+    novels are only visible to administrators.
     """
     table = get_user_table(user)
-    role = user.role
-    query = f"SELECT * FROM {table} WHERE COALESCE(is_deleted, 0) = 0"
-    if role != "admin":
-        query = (
-            f"SELECT * FROM {table} "
-            "WHERE COALESCE(is_deleted, 0) = 0 AND tags NOT LIKE '%nsfw%'"
-        )
+    query = (
+        f"SELECT * FROM {table} "
+        "WHERE COALESCE(is_deleted, 0) = 0"
+        f"{_visibility_filter(user.role)}"
+    )
 
     return fetch_all(query, close=True)
 
@@ -518,13 +527,21 @@ def delete_missing_epub_novels(table=DEFAULT_TABLE):
     return max(cur.rowcount, 0)
 
 
-def get_novel(novel_id, table=DEFAULT_TABLE, column="*", row_factory=True):
+def get_novel(
+    novel_id, table=DEFAULT_TABLE, column="*", row_factory=True, user=None
+):
     """
     Return one active novel by ID.
+
+    When ``user`` is provided, NSFW-tagged novels are hidden from
+    non-administrators, matching the library list.
     """
+    visibility = _visibility_filter(user.role) if user is not None else ""
+
     return fetch_one(
         f"SELECT {column} FROM {table} "
-        "WHERE id=? AND COALESCE(is_deleted, 0) = 0",
+        "WHERE id=? AND COALESCE(is_deleted, 0) = 0"
+        f"{visibility}",
         (novel_id,),
         row_factory=row_factory,
     )

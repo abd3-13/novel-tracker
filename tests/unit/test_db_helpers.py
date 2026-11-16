@@ -86,6 +86,45 @@ def test_get_table_excludes_soft_deleted_novels(monkeypatch):
     assert "COALESCE(is_deleted, 0) = 0" in captured["query"]
 
 
+def test_get_table_hides_nsfw_from_regular_users(monkeypatch):
+    captured = {}
+
+    class User:
+        role = "user"
+
+    def fake_fetch_all(query, **kwargs):
+        captured["query"] = query
+        return []
+
+    monkeypatch.setattr(db, "get_user_table", lambda user: "novels")
+    monkeypatch.setattr(db, "fetch_all", fake_fetch_all)
+
+    db.get_table(User())
+
+    assert "tags IS NULL" in captured["query"]
+    assert "LOWER(tags) NOT LIKE '%nsfw%'" in captured["query"]
+
+
+def test_get_novel_applies_nsfw_visibility(monkeypatch):
+    captured = {}
+
+    class User:
+        def __init__(self, role):
+            self.role = role
+
+    def fake_fetch_one(query, *args, **kwargs):
+        captured["query"] = query
+        return None
+
+    monkeypatch.setattr(db, "fetch_one", fake_fetch_one)
+
+    db.get_novel(1, table="novels", user=User("user"))
+    assert "tags IS NULL" in captured["query"]
+
+    db.get_novel(1, table="novels", user=User("admin"))
+    assert "tags IS NULL" not in captured["query"]
+
+
 def test_delete_missing_epub_novels_flags_only_missing_active_rows(monkeypatch):
     captured = {}
 
