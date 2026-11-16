@@ -265,7 +265,6 @@ class OnlineProvider(BaseProvider):
 
         self.ctx.logger.info(
             f"Characters: {result['characters']} "
-            f"Downloaded: {result['downloaded']} "
             f"Failed: {result['failed']}"
         )
 

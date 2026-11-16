@@ -87,7 +87,6 @@ class CharacterInfo:
     birthday: str | None = None
     height: str | None = None
     description: str | None = None
-    image_url: str | None = None
     data: dict[str, Any] | None = None
 
 
@@ -239,5 +238,4 @@ def normalize_character(data: dict) -> CharacterInfo:
         birthday=data.get(WebnovelJsonKey.BIRTHDAY),
         height=normalize_height(data.get(WebnovelJsonKey.HEIGHT)),
         description=normalize_text(data.get(WebnovelJsonKey.DESCRIPTION, "")),
-        image_url=data.get(WebnovelJsonKey.DESIGN_IMAGE),
     )

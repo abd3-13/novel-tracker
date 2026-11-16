@@ -1,21 +1,15 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from app.constants import (
-    DefaultValue,
     WebnovelErrorMessage,
     WebnovelSummaryKey,
     WebnovelSummaryStatus,
 )
-from app.utils.images import (
-    convert_to_webp,
-    download_image,
-)
 from app.utils.tools import (
-    sanitize_filename,
     write_characters_json,
     write_characters_txt,
 )
@@ -26,7 +20,7 @@ logger = logging.getLogger(__name__)
 _client = WebnovelClient()
 
 
-# Number of retries for failed detail/image fetches.
+# Number of retries for failed detail fetches.
 MAX_RETRY = 5
 
 
@@ -47,11 +41,7 @@ class CharacterTask:
 
     role_id: str
     name: str
-    detail: CharacterInfo | None = None
-    image_downloaded: bool = False
-    image_path: Path | None = None
     detail_failed: bool = False
-    image_failed: bool = False
 
 
 @dataclass(slots=True)
@@ -63,12 +53,9 @@ class CharacterFetchState:
 
     book_id: str
     output_dir: Path
-    delay: float
-    overwrite: bool
     dry_run: bool
     tasks: list[CharacterTask] = field(default_factory=list)
     characters: list[CharacterInfo] = field(default_factory=list)
-    downloaded: int = 0
 
 
 # ----------------------------------------------------------------------
@@ -80,14 +67,12 @@ def fetch_characters(
     *,
     book_id: str | None = None,
     output_dir: Path,
-    delay: float = 1.0,
-    overwrite: bool = False,
     dry_run: bool = False,
 ) -> dict:
     """
     Fetch all WebNovel characters.
     Workflow
-      Character list > Character details > Retry failed details > Download images > Retry failed images > Write JSON/TXT > Return summary
+      Character list > Character details > Retry failed details > Write JSON/TXT > Return summary
     """
     if not book_id:
         raise CharacterFetchError(WebnovelErrorMessage.BOOK_ID_REQUIRED)
@@ -102,8 +87,6 @@ def fetch_characters(
     state = CharacterFetchState(
         book_id=book_id,
         output_dir=output_dir,
-        delay=delay,
-        overwrite=overwrite,
         dry_run=dry_run,
     )
     logger.info("Loading character list...")
@@ -112,10 +95,6 @@ def fetch_characters(
     _fetch_character_details(state)
     logger.info("Retrying failed details...")
     _retry_failed_details(state)
-    logger.info("Downloading images...")
-    _download_images(state)
-    logger.info("Retrying failed images...")
-    _retry_failed_images(state)
     if not dry_run:
         logger.info("Writing output files...")
         _write_outputs(state)
@@ -178,90 +157,25 @@ def _retry_failed_details(state: CharacterFetchState) -> None:
 # ----------------------------------------------------------------------
 # Step 4
 # ----------------------------------------------------------------------
-def _download_images(state: CharacterFetchState) -> None:
-    """
-    Download all character images.
-    """
-    for task in state.tasks:
-        if task.detail is None:
-            continue
-        image_url = task.detail.image_url
-        if not image_url:
-            continue
-        filename = sanitize_filename(task.detail.name + ".jpg")
-        image = download_image(
-            url=image_url,
-            filename=filename,
-            folder=state.output_dir,
-            dry_run=state.dry_run,
-        )
-        if image is None:
-            task.image_failed = True
-            continue
-        image_path = state.output_dir / filename
-        task.image_path = convert_to_webp(image_path)
-        task.image_downloaded = True
-        state.downloaded += 1
-
-
-# ----------------------------------------------------------------------
-# Step 5
-# ----------------------------------------------------------------------
-def _retry_failed_images(state: CharacterFetchState) -> None:
-    """
-    Retry failed image downloads.
-    """
-    for task in state.tasks:
-        if not task.image_failed:
-            continue
-        detail = task.detail
-        if detail is None:
-            continue
-        image_url = detail.image_url
-        if not image_url:
-            continue
-        image_url = detail.image_url
-        name = detail.name or DefaultValue.UNKNOWN_TEXT
-        filename = sanitize_filename(f"{name}.jpg")
-        for _ in range(MAX_RETRY):
-            image = download_image(
-                url=image_url,
-                filename=filename,
-                folder=state.output_dir,
-                dry_run=state.dry_run,
-            )
-            if image is None:
-                continue
-            image_path = state.output_dir / filename
-            task.image_path = convert_to_webp(image_path)
-            task.image_failed = False
-            task.image_downloaded = True
-            state.downloaded += 1
-            break
-
-
-# ----------------------------------------------------------------------
-# Step 6
-# ----------------------------------------------------------------------
 def _write_outputs(
     state: CharacterFetchState,
 ) -> None:
     """
     Write all output files.
     """
-    characters_dict = [c.__dict__ for c in state.characters]
+    characters_dict = [asdict(character) for character in state.characters]
     write_characters_json(characters_dict, state.output_dir)
     write_characters_txt(characters_dict, state.output_dir)
 
 
 # ----------------------------------------------------------------------
-# Step 7
+# Step 5
 # ----------------------------------------------------------------------
 def _build_summary(state: CharacterFetchState) -> dict:
     """
     Build the Flask/CLI response.
     """
-    failed = sum(1 for task in state.tasks if task.detail_failed or task.image_failed)
+    failed = sum(1 for task in state.tasks if task.detail_failed)
     return {
         WebnovelSummaryKey.STATUS: (
             WebnovelSummaryStatus.SUCCESS
@@ -270,10 +184,9 @@ def _build_summary(state: CharacterFetchState) -> dict:
         ),
         WebnovelSummaryKey.BOOK_ID: state.book_id,
         WebnovelSummaryKey.CHARACTERS: len(state.characters),
-        WebnovelSummaryKey.DOWNLOADED: state.downloaded,
         WebnovelSummaryKey.FAILED: failed,
         WebnovelSummaryKey.OUTPUT_DIR: str(state.output_dir),
         WebnovelSummaryKey.MSG: (
-            f"Downloaded {state.downloaded} of {len(state.characters)} characters"
+            f"Fetched {len(state.characters)} of {len(state.tasks)} characters"
         ),
     }
