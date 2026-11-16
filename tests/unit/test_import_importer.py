@@ -37,6 +37,9 @@ def patch_import(monkeypatch, tmp_path, **overrides):
         monkeypatch.setattr(importer, name, value)
 
     monkeypatch.setattr(importer.db, "find_dup_title_db", lambda title, table: None)
+    monkeypatch.setattr(
+        importer.db, "find_deleted_dup_title_db", lambda title, table: None
+    )
 
 
 def test_import_inserts_new_novel(monkeypatch, tmp_path):
@@ -104,6 +107,39 @@ def test_import_skips_duplicate_titles(monkeypatch, tmp_path):
 
     assert result["summary"]["skipped"] == 1
     assert result["results"][0]["reason"] == "Already exists in library."
+
+
+def test_import_restores_a_soft_deleted_novel(monkeypatch, tmp_path):
+    make_epub(tmp_path)
+
+    patch_import(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        importer.db,
+        "find_deleted_dup_title_db",
+        lambda title, table: {"id": 7, "name": title},
+    )
+    monkeypatch.setattr(
+        importer.db,
+        "insert_novel",
+        lambda data, table: pytest.fail("should restore, not insert"),
+    )
+
+    restored = {}
+
+    def update_novel(novel_id, updates, table):
+        restored["id"] = novel_id
+        restored.update(updates)
+        return True
+
+    monkeypatch.setattr(importer.db, "update_novel", update_novel)
+
+    result = importer.import_files(["book.epub"], "novels")
+
+    assert result["summary"]["imported"] == 1
+    assert restored["id"] == 7
+    assert restored["name"] == "Book"
+    assert restored["filepath"] == "book.epub"
+    assert restored["is_deleted"] == 0
 
 
 def test_import_rejects_filenames_outside_the_epub_directory(monkeypatch, tmp_path):

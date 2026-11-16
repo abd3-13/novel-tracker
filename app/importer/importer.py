@@ -171,6 +171,7 @@ def iter_import_files(filenames: list[str], table: str):
         cover = extract_epub_cover(filename, cover_id=cover_id) or ""
 
         novel = build_novel_from_metadata(meta, filename, title=title, cover=cover)
+        deleted = db.find_deleted_dup_title_db(title, table)
 
         yield "stage", {
             "stage": "insert",
@@ -178,6 +179,25 @@ def iter_import_files(filenames: list[str], table: str):
             "total": total,
             "filename": filename,
         }
+
+        if deleted:
+            # The title still exists as a tombstone. Restore that row instead
+            # of hitting the UNIQUE(name) constraint with a fresh insert.
+            novel["is_deleted"] = 0
+            try:
+                db.update_novel(deleted["id"], novel, table=table)
+            except Exception as exc:  # noqa: BLE001
+                result = _result(filename, "failed", f"Database update failed: {exc}")
+                results.append(result)
+                failed += 1
+                yield "file_done", _file_event(current, total, filename, result, title)
+                continue
+
+            result = _result(filename, "imported")
+            results.append(result)
+            imported += 1
+            yield "file_done", _file_event(current, total, filename, result, title)
+            continue
 
         try:
             db.insert_novel(novel, table=table)

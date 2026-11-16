@@ -576,7 +576,10 @@ def get_db_filesNcover(table=DEFAULT_TABLE):
       (epub filenames, cover filenames)
     """
     rows = fetch_all(
-        f"SELECT filepath, cover_path FROM {table} WHERE filepath IS NOT NULL OR cover_path IS NOT NULL ORDER BY filepath",
+        f"SELECT filepath, cover_path FROM {table} "
+        "WHERE COALESCE(is_deleted, 0) = 0 "
+        "AND (filepath IS NOT NULL OR cover_path IS NOT NULL) "
+        "ORDER BY filepath",
         close=True,
     )
     epub_files = set()
@@ -612,13 +615,37 @@ def get_cover_files():
 
 def find_dup_title_db(input_title, table=DEFAULT_TABLE):
     """
-    Search for a duplicate novel title using normalized titles.
+    Search for an active duplicate novel title using normalized titles.
     Returns
     -------
     dict | None
     """
     normalized = normalize_title(input_title)
-    rows = fetch_all(f"SELECT id, name FROM {table}", close=True)
+    rows = fetch_all(
+        f"SELECT id, name FROM {table} WHERE COALESCE(is_deleted, 0) = 0",
+        close=True,
+    )
+    for novel_id, title in rows:
+        if normalize_title(title) == normalized:
+            return {"id": novel_id, "name": title}
+    return None
+
+
+def find_deleted_dup_title_db(input_title, table=DEFAULT_TABLE):
+    """
+    Search for a soft-deleted novel with the same normalized title.
+
+    Importing a book whose row was previously flagged as deleted restores
+    that row instead of failing on the UNIQUE(name) constraint.
+    Returns
+    -------
+    dict | None
+    """
+    normalized = normalize_title(input_title)
+    rows = fetch_all(
+        f"SELECT id, name FROM {table} WHERE COALESCE(is_deleted, 0) = 1",
+        close=True,
+    )
     for novel_id, title in rows:
         if normalize_title(title) == normalized:
             return {"id": novel_id, "name": title}

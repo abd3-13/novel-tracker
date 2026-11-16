@@ -22,17 +22,51 @@ def test_get_db_files_ncover_reads_rows_returned_by_fetch_all(monkeypatch):
 
 
 def test_find_dup_title_db_reads_rows_returned_by_fetch_all(monkeypatch):
-    monkeypatch.setattr(
-        db,
-        "fetch_all",
-        lambda *args, **kwargs: [(1, "Some Book"), (2, "Another Book")],
-    )
+    captured = {}
+
+    def fake_fetch_all(query, **kwargs):
+        captured["query"] = query
+        return [(1, "Some Book"), (2, "Another Book")]
+
+    monkeypatch.setattr(db, "fetch_all", fake_fetch_all)
 
     assert db.find_dup_title_db("Some Book", "novels") == {
         "id": 1,
         "name": "Some Book",
     }
     assert db.find_dup_title_db("Missing Book", "novels") is None
+    assert "COALESCE(is_deleted, 0) = 0" in captured["query"]
+
+
+def test_find_deleted_dup_title_db_reads_soft_deleted_rows(monkeypatch):
+    captured = {}
+
+    def fake_fetch_all(query, **kwargs):
+        captured["query"] = query
+        return [(3, "Some Book")]
+
+    monkeypatch.setattr(db, "fetch_all", fake_fetch_all)
+
+    assert db.find_deleted_dup_title_db("some book", "novels") == {
+        "id": 3,
+        "name": "Some Book",
+    }
+    assert db.find_deleted_dup_title_db("Missing Book", "novels") is None
+    assert "COALESCE(is_deleted, 0) = 1" in captured["query"]
+
+
+def test_get_db_files_ncover_excludes_soft_deleted_rows(monkeypatch):
+    captured = {}
+
+    def fake_fetch_all(query, **kwargs):
+        captured["query"] = query
+        return []
+
+    monkeypatch.setattr(db, "fetch_all", fake_fetch_all)
+
+    db.get_db_filesNcover("novels")
+
+    assert "COALESCE(is_deleted, 0) = 0" in captured["query"]
 
 
 def test_get_table_excludes_soft_deleted_novels(monkeypatch):

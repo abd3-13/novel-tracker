@@ -26,8 +26,11 @@ def _known_files(table: str) -> set[str]:
 
 
 def _known_titles(table: str) -> set[str]:
-    """Return normalized titles already present in the database."""
-    rows = db.fetch_all(f"SELECT name FROM {table}", close=True)
+    """Return normalized titles of active novels already in the database."""
+    rows = db.fetch_all(
+        f"SELECT name FROM {table} WHERE COALESCE(is_deleted, 0) = 0",
+        close=True,
+    )
     return {normalize_title(name) for (name,) in rows if name}
 
 
