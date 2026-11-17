@@ -1,9 +1,9 @@
 import logging
-import time
 from pathlib import Path
 
-import requests
 from PIL import Image
+
+from app.utils import net
 
 IMG_OUT = 10
 logger = logging.getLogger(__name__)
@@ -88,24 +88,22 @@ def download_image(
         logger.info(f"[DRY-RUN] Download image → {filepath}")
         return filename
 
-    for attempt in range(1, retries + 1):
-        try:
-            resp = requests.get(url, timeout=IMG_OUT)
-            resp.raise_for_status()
-            filepath.write_bytes(resp.content)
-            logger.info("Saved image: %s", filepath)
-            return filename
-        except KeyboardInterrupt:
-            logger.info("\n[INFO] Received Ctrl+C. Aborting...")
-            raise
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "Download attempt %d/%d failed for %s: %s",
-                attempt,
-                retries,
-                filename,
-                exc,
-            )
-            time.sleep(delay)
+    try:
+        response = net.get(
+            url,
+            timeout=IMG_OUT,
+            retries=retries,
+            initial_delay=delay,
+            impersonate="chrome_android",
+        )
+        response.raise_for_status()
+        filepath.write_bytes(response.content)
+    except KeyboardInterrupt:
+        logger.info("\n[INFO] Received Ctrl+C. Aborting...")
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Download failed for %s: %s", filename, exc)
+        return None
 
-    return None
+    logger.info("Saved image: %s", filepath)
+    return filename
