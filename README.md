@@ -72,11 +72,28 @@ rejected.
   process. If you need multiple workers, the job store and event bus must be
   moved to shared storage first; otherwise a status request may hit a worker
   that never saw the job.
+- Serve with one worker and several threads. Sync progress is delivered over
+  Server-Sent Events, and every open stream holds a thread for its lifetime,
+  so allow enough threads for the library tabs you expect to keep open:
+
+  ```bash
+  pip install gunicorn
+  gunicorn --worker-class gthread --workers 1 --threads 8 \
+    --timeout 0 --bind 127.0.0.1:5000 app:app
+  ```
+
+  `--timeout 0` disables gunicorn's worker timeout; without it a sync that
+  runs longer than the default 30 seconds can have its worker killed while
+  the event stream is still open. Keep `--workers 1`: a second worker process
+  would return 404 for any job started by the first.
 - Each job keeps a bounded number of finished snapshots (`SyncManager`),
   enough for a late status check without unbounded memory growth.
 - SQLite runs in WAL mode. This lets pages and status requests read while a
   sync writes; it does not make SQLite suitable for many concurrent writers.
 - Serve over HTTPS in production and set `SESSION_COOKIE_SECURE=1`.
+- `flask --app app.py backup-db` writes a consistent snapshot and
+  `flask --app app.py integrity-check` verifies the database file. Both are
+  safe to run while the application is serving.
 
 ## Why V2?
 
