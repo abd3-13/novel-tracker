@@ -157,3 +157,31 @@ def test_retry_after_seconds_ignores_invalid_values():
         net.retry_after_seconds(FakeResponse(429, headers={"Retry-After": "soon"}))
         is None
     )
+
+
+def test_http_get_returns_json_and_uses_impersonation(monkeypatch):
+    from app.utils import tools
+
+    captured = {}
+
+    def fake_get(url, **kwargs):
+        captured["url"] = url
+        captured.update(kwargs)
+        return FakeResponse(200, {"ok": True})
+
+    monkeypatch.setattr(net, "get", fake_get)
+
+    assert tools.http_get("https://example.test/api", params={"a": 1}) == {"ok": True}
+    assert captured["impersonate"] == "chrome_android"
+    assert captured["params"] == {"a": 1}
+
+
+def test_http_get_raises_for_non_retryable_errors(monkeypatch):
+    from app.utils import tools
+
+    monkeypatch.setattr(
+        net, "get", lambda url, **kwargs: FakeResponse(404, {"error": "missing"})
+    )
+
+    with pytest.raises(RuntimeError, match="HTTP 404"):
+        tools.http_get("https://example.test/api")
