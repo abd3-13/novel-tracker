@@ -45,6 +45,23 @@ def _forbidden():
     ), 403
 
 
+def _json_payload():
+    """Return the request body when it is a JSON object, otherwise ``None``."""
+    payload = request.get_json(silent=True)
+
+    return payload if isinstance(payload, dict) else None
+
+
+def _invalid_body():
+    return jsonify(
+        {
+            "success": False,
+            "message": "Request body must be a JSON object.",
+            "category": "warning",
+        }
+    ), 400
+
+
 @import_bp.get("/api/v1/import/scan/events")
 @login_required
 def api_import_scan_events():
@@ -86,7 +103,11 @@ def api_import_files():
     if table is None:
         return _forbidden()
 
-    payload = request.get_json(silent=True) or {}
+    payload = _json_payload()
+
+    if payload is None:
+        return _invalid_body()
+
     filenames = payload.get("filenames")
 
     if not isinstance(filenames, list) or not filenames:
@@ -139,7 +160,11 @@ def api_import_files_events():
     if table is None:
         return _forbidden()
 
-    payload = request.get_json(silent=True) or {}
+    payload = _json_payload()
+
+    if payload is None:
+        return _invalid_body()
+
     filenames = payload.get("filenames")
 
     if not isinstance(filenames, list) or not filenames:

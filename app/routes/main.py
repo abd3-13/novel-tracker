@@ -14,6 +14,7 @@ from flask import (
     stream_with_context,
 )
 from flask_login import current_user, login_required
+from werkzeug.exceptions import NotFound
 
 from app.auth import admin_required, editor_required
 from app.constants import (
@@ -400,7 +401,16 @@ def api_get_settings():
 @main_bp.post("/api/v1/settings")
 @admin_required
 def api_save_setting():
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+
+    if not isinstance(payload, dict):
+        return jsonify(
+            {
+                "success": False,
+                "message": "Request body must be a JSON object.",
+                "category": "warning",
+            }
+        ), 400
 
     key = payload.get("key")
     value = payload.get("value")
@@ -500,7 +510,7 @@ def api_sync():
             }
         ), 202
 
-    except ValueError as exc:
+    except (TypeError, ValueError) as exc:
         return jsonify(
             {
                 "success": False,
@@ -675,7 +685,7 @@ def serve_epub(novelID):
 
     try:
         response = make_response(send_from_directory(epub_dir, filename))
-    except FileNotFoundError:
+    except (FileNotFoundError, NotFound):
         return jsonify(
             {
                 "success": False,
