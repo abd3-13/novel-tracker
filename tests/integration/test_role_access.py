@@ -90,7 +90,7 @@ def test_demo_account_is_read_only(client):
     ).status_code == 403
     assert client.post(
         "/api/v1/import/scan", json={}, headers=headers
-    ).status_code == 403
+    ).status_code == 404
     assert client.post(
         "/api/v1/sync", json={}, headers=headers
     ).status_code == 403
@@ -140,6 +140,11 @@ def test_admin_can_delete_and_start_sync(client):
 
     assert library[0]["permissions"]["can_delete"] is True
     assert library[0]["permissions"]["can_sync"] is True
+
+    # The unused JSON scan endpoint was removed; only the SSE scan remains.
+    assert client.post(
+        "/api/v1/import/scan", json={}, headers=headers
+    ).status_code == 404
 
     assert client.delete(
         "/api/v1/library/missing-epub", headers=headers

@@ -270,24 +270,6 @@ export function listenImportScan(handlers = {}) {
   return source;
 }
 
-export async function scanImport() {
-  const response = await fetch('/api/v1/import/scan', {
-    method: 'POST',
-    headers: csrfHeaders({
-      'Content-Type': 'application/json'
-    }),
-    body: JSON.stringify({})
-  });
-
-  const result = await response.json();
-
-  if (!response.ok || !result.success) {
-    throw new Error(result.message || `Failed to scan EPUBs (${response.status}).`);
-  }
-
-  return result;
-}
-
 export async function importEpubs(filenames) {
   const response = await fetch('/api/v1/import', {
     method: 'POST',

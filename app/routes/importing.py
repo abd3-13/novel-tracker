@@ -15,7 +15,7 @@ from flask_login import current_user, login_required
 
 from app.constants import AuthRole
 from app.importer.importer import import_files, iter_import_files
-from app.importer.scanner import iter_scan_library, scan_library
+from app.importer.scanner import iter_scan_library
 from app.sync.services import get_epub_cover_bytes
 from app.utils import db
 
@@ -43,38 +43,6 @@ def _forbidden():
             "category": "warning",
         }
     ), 403
-
-
-@import_bp.post("/api/v1/import/scan")
-@login_required
-def api_import_scan():
-    table = _import_table()
-
-    if table is None:
-        return _forbidden()
-
-    try:
-        result = scan_library(table)
-    except ValueError as exc:
-        current_app.logger.warning(f"Import scan failed: {exc!s}")
-        return jsonify(
-            {
-                "success": False,
-                "message": str(exc),
-                "category": "warning",
-            }
-        ), 400
-    except Exception as exc:  # noqa: BLE001
-        current_app.logger.error(f"Failed to scan EPUB directory: {exc!s}")
-        return jsonify(
-            {
-                "success": False,
-                "message": "Failed to scan EPUB directory.",
-                "category": "error",
-            }
-        ), 500
-
-    return jsonify({"success": True, **result})
 
 
 @import_bp.get("/api/v1/import/scan/events")
