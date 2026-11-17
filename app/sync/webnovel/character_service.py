@@ -106,7 +106,12 @@ def fetch_characters(
 # ----------------------------------------------------------------------
 def _load_character_list(state: CharacterFetchState) -> None:
     "Retrieve the list of characters from WebNovel."
-    items = _client.get_character_list(state.book_id)
+    try:
+        items = _client.get_character_list(state.book_id)
+    except Exception as exc:  # noqa: BLE001
+        raise CharacterFetchError(
+            f"Could not load characters for book {state.book_id}: {exc}"
+        ) from exc
 
     if not items:
         raise CharacterFetchError(
@@ -126,7 +131,17 @@ def _fetch_character_details(state: CharacterFetchState) -> None:
     Failed requests are marked for retry.
     """
     for task in state.tasks:
-        detail = _client.get_character_detail(state.book_id, task.role_id)
+        try:
+            detail = _client.get_character_detail(state.book_id, task.role_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Character detail failed for %s (%s): %s",
+                task.name,
+                task.role_id,
+                exc,
+            )
+            task.detail_failed = True
+            continue
 
         if detail is None:
             task.detail_failed = True
@@ -146,7 +161,16 @@ def _retry_failed_details(state: CharacterFetchState) -> None:
         if not task.detail_failed:
             continue
         for _ in range(MAX_RETRY):
-            detail = _client.get_character_detail(state.book_id, task.role_id)
+            try:
+                detail = _client.get_character_detail(state.book_id, task.role_id)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(
+                    "Character detail retry failed for %s (%s): %s",
+                    task.name,
+                    task.role_id,
+                    exc,
+                )
+                continue
             if detail is None:
                 continue
             task.detail_failed = False

@@ -151,7 +151,6 @@ def sync_progress(ctx, field: MetadataField):
 
     ctx.logger.field(field.column, current_value, new_value, should_update)
     ctx.emit(Event.FIELD, field=field.column, name=field.name, value=new_value)
-    print(f"Progress: {current_value} -> {new_value} (should_update={should_update})")
     # ----------------------------
     # Sync
     # ----------------------------

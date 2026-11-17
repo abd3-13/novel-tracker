@@ -15,7 +15,10 @@ from app.sync.services import (
     get_moonreader_progress,
 )
 from app.sync.webnovel.api import WebnovelClient
-from app.sync.webnovel.character_service import fetch_characters as WN_fetch_characters
+from app.sync.webnovel.character_service import (
+    CharacterServiceError,
+    fetch_characters as WN_fetch_characters,
+)
 from app.utils import db
 
 _client = WebnovelClient()
@@ -216,6 +219,17 @@ class OnlineProvider(BaseProvider):
 
         self.ctx.logger.debug(f"Fetched WebNovel metadata ({book_id})")
 
+        # A failed character count should not discard the rest of the
+        # metadata: the novel is still usable without it.
+        try:
+            online_characters = _client.count_online_characters(book_id)
+        except Exception as exc:  # noqa: BLE001
+            self.ctx.logger.warning(
+                f"Could not count online characters for "
+                f"'{self.novel[MetadataKey.TITLE]}': {exc}"
+            )
+            online_characters = None
+
         self.data = {
             # Basic
             MetadataKey.TITLE: info.title,
@@ -225,11 +239,13 @@ class OnlineProvider(BaseProvider):
             MetadataKey.SOURCE: SourceDomain.WEBNOVEL,
             MetadataKey.ONLINE_CHAPTERS: info.chapter,
             MetadataKey.LATEST_CHAPTER_TIME: info.chapter_time,
-            MetadataKey.ONLINE_CHARACTERS: _client.count_online_characters(book_id),
             MetadataKey.STATUS: info.status,
             MetadataKey.COVER: info.cover,
             MetadataKey.FILEPATH: self.filepath,
         }
+
+        if online_characters is not None:
+            self.data[MetadataKey.ONLINE_CHARACTERS] = online_characters
 
         self.ctx.logger.debug(f"Online provider loaded {len(self.data)} fields.")
 
@@ -261,12 +277,23 @@ class OnlineProvider(BaseProvider):
             / self.filepath
         )
         self.ctx.emit(Event.ASSET, asset=Asset.CHARACTERS)
-        result = WN_fetch_characters(book_id=self.book_id, output_dir=output_dir)
 
-        self.ctx.logger.info(
-            f"Characters: {result['characters']} "
-            f"Failed: {result['failed']}"
-        )
+        try:
+            result = WN_fetch_characters(book_id=self.book_id, output_dir=output_dir)
+        except CharacterServiceError as exc:
+            self.ctx.logger.error(
+                f"Character fetch failed for "
+                f"'{self.novel[MetadataKey.TITLE]}': {exc}"
+            )
+            return None
+
+        if result["failed"]:
+            self.ctx.logger.warning(
+                f"Characters: {result['characters']} fetched, "
+                f"{result['failed']} failed"
+            )
+        else:
+            self.ctx.logger.info(f"Characters: {result['characters']} fetched")
 
         return result
 
