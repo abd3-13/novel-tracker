@@ -1,13 +1,43 @@
 """Development and administration CLI commands."""
 
+import sqlite3
+from datetime import datetime, timezone
+from pathlib import Path
+
 import click
 from flask import Flask
 from werkzeug.security import generate_password_hash
 
-from app.constants import AuthRole
+from app.constants import AuthRole, Default
 from app.utils import db
 
 ROLES = [role.value for role in AuthRole]
+NOVEL_TABLES = [Default.NOVEL_TABLE.value, Default.DEMO_NOVEL_TABLE.value]
+
+
+def _novel_table_option(function):
+    return click.option(
+        "--table",
+        type=click.Choice(NOVEL_TABLES),
+        default=Default.NOVEL_TABLE.value,
+        show_default=True,
+        help="Novel table to operate on.",
+    )(function)
+
+
+def _default_backup_path(source: Path) -> Path:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    suffix = source.suffix or ".db"
+    return source.parent / "backups" / f"{source.stem}-{stamp}{suffix}"
+
+
+def _require_database() -> Path:
+    source = Path(db.DEFAULT_DB)
+
+    if not source.exists():
+        raise click.ClickException(f"Database not found: {source}")
+
+    return source
 
 
 def _require_password(password: str) -> str:
@@ -242,3 +272,76 @@ def register_cli(app: Flask) -> None:
         )
 
         click.echo(f"Enabled user '{row['username']}'.")
+
+    @app.cli.command("backup-db")
+    @click.option(
+        "--output",
+        type=click.Path(dir_okay=False, path_type=Path),
+        default=None,
+        help="Write the snapshot here instead of the backups directory.",
+    )
+    def backup_db(output: Path | None) -> None:
+        """Write a consistent snapshot of the database."""
+        source = _require_database()
+        destination = output or _default_backup_path(source)
+
+        if destination.exists():
+            raise click.ClickException(f"Refusing to overwrite {destination}.")
+
+        try:
+            db.backup_database(destination)
+        except sqlite3.DatabaseError as exc:
+            raise click.ClickException(f"Backup failed: {exc}") from exc
+
+        size = destination.stat().st_size
+        click.echo(f"Backed up {source} to {destination} ({size:,} bytes).")
+
+    @app.cli.command("integrity-check")
+    def integrity_check() -> None:
+        """Verify the database file is not corrupt."""
+        source = _require_database()
+
+        try:
+            result, foreign_keys = db.check_integrity()
+        except sqlite3.DatabaseError as exc:
+            raise click.ClickException(f"Integrity check failed: {exc}") from exc
+
+        if result != "ok":
+            raise click.ClickException(f"Integrity check failed:\n{result}")
+
+        if foreign_keys:
+            raise click.ClickException(
+                f"Integrity check found {len(foreign_keys)} foreign key violation(s)."
+            )
+
+        click.echo(f"Integrity check passed: {source}")
+
+    @app.cli.command("list-deleted-novels")
+    @_novel_table_option
+    def list_deleted_novels(table: str) -> None:
+        """List novels flagged as deleted, with their IDs."""
+        rows = db.fetch_all(
+            f"SELECT id, name FROM {table} "
+            "WHERE COALESCE(is_deleted, 0) = 1 ORDER BY name",
+            close=True,
+            row_factory=True,
+        )
+
+        if not rows:
+            click.echo("No deleted novels.")
+            return
+
+        for row in rows:
+            click.echo(f"{row['id']:>6}  {row['name']}")
+
+    @app.cli.command("restore-novel")
+    @click.argument("novel_id", type=click.IntRange(min=1))
+    @_novel_table_option
+    def restore_novel(novel_id: int, table: str) -> None:
+        """Bring a soft-deleted novel back into the library."""
+        if not db.restore_novel(novel_id, table=table):
+            raise click.ClickException(
+                f"Novel {novel_id} is not deleted in the '{table}' table."
+            )
+
+        click.echo(f"Restored novel {novel_id} in the '{table}' table.")

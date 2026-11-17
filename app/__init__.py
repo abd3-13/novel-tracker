@@ -1,4 +1,5 @@
 import secrets
+import sqlite3
 
 from flask import Flask
 from flask_login import LoginManager
@@ -43,8 +44,20 @@ def create_app(config_object=Config):
 
     # Create missing tables before any request can read settings or novels.
     # Both operations are idempotent and never overwrite existing rows.
-    db.init_db()
-    db.ensure_schema()
+    #
+    # A corrupt database file must not prevent the app object from being
+    # created: `flask integrity-check` and `flask backup-db` are how an
+    # operator diagnoses and recovers from exactly that situation.
+    try:
+        db.init_db()
+        db.ensure_schema()
+    except sqlite3.DatabaseError as exc:
+        app.logger.error(
+            "Database initialization failed: %s. "
+            "Run 'flask integrity-check' and restore from a backup.",
+            exc,
+        )
+        app.extensions["db_init_error"] = exc
 
     # Register blueprints
     app.register_blueprint(auth_bp)

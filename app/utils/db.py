@@ -275,6 +275,62 @@ def init_users_table():
 
 
 # ============================================================================
+# Database Maintenance
+# ============================================================================
+
+
+def backup_database(destination):
+    """
+    Write a consistent copy of the live database to ``destination``.
+
+    Uses SQLite's online backup API, so the snapshot is valid even while the
+    application is running and the database is in WAL mode.
+    Returns
+    -------
+    Path
+      The path that was written.
+    """
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    source = get_conn()
+    target = sqlite3.connect(destination)
+
+    try:
+        source.backup(target)
+        target.commit()
+    finally:
+        target.close()
+        source.close()
+
+    return destination
+
+
+def check_integrity():
+    """
+    Run SQLite's consistency check on the live database.
+    Returns
+    -------
+    tuple[str, list[tuple]]
+      The ``PRAGMA integrity_check`` result ("ok" when healthy) and any
+      foreign-key violations.
+    """
+    conn = get_conn()
+
+    try:
+        rows = conn.execute("PRAGMA integrity_check").fetchall()
+        foreign_keys = conn.execute("PRAGMA foreign_key_check").fetchall()
+    finally:
+        conn.close()
+
+    # A healthy database reports a single "ok" row; failures report one row
+    # per problem, so keep them all for the operator.
+    result = "\n".join(row[0] for row in rows) or "integrity_check returned no rows"
+
+    return result, foreign_keys
+
+
+# ============================================================================
 # Settings API
 # ============================================================================
 

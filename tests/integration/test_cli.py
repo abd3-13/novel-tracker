@@ -1,5 +1,7 @@
 """Coverage for the account administration CLI commands."""
 
+import sqlite3
+
 import pytest
 from werkzeug.security import check_password_hash
 
@@ -310,3 +312,188 @@ def test_disabled_admin_is_not_counted_as_active(runner):
 
     assert result.exit_code != 0
     assert "last active administrator" in result.output
+
+
+# ----------------------------------------------------------------------
+# Database maintenance
+# ----------------------------------------------------------------------
+
+
+def add_novel(table="novels", **values):
+    values.setdefault("name", "Book")
+    values.setdefault("filepath", "Book.epub")
+
+    db.insert_novel(values, table=table)
+
+    return db.fetch_one(
+        f"SELECT id FROM {table} WHERE name = ?", (values["name"],)
+    )[0]
+
+
+def test_backup_db_writes_a_readable_snapshot(runner, tmp_path):
+    add_novel(name="Kept")
+
+    destination = tmp_path / "snapshot.db"
+    result = runner.invoke(args=["backup-db", "--output", str(destination)])
+
+    assert result.exit_code == 0, result.output
+    assert str(destination) in result.output
+
+    copy = sqlite3.connect(destination)
+    try:
+        rows = copy.execute("SELECT name FROM novels").fetchall()
+    finally:
+        copy.close()
+
+    assert rows == [("Kept",)]
+
+
+def test_backup_db_defaults_to_the_backups_directory(runner, tmp_path):
+    result = runner.invoke(args=["backup-db"])
+
+    assert result.exit_code == 0, result.output
+
+    snapshots = list((tmp_path / "backups").glob("cli-*.db"))
+    assert len(snapshots) == 1
+
+
+def test_backup_db_refuses_to_overwrite(runner, tmp_path):
+    destination = tmp_path / "snapshot.db"
+    destination.write_bytes(b"existing")
+
+    result = runner.invoke(args=["backup-db", "--output", str(destination)])
+
+    assert result.exit_code != 0
+    assert "Refusing to overwrite" in result.output
+    assert destination.read_bytes() == b"existing"
+
+
+def test_backup_db_requires_an_existing_database(runner, monkeypatch, tmp_path):
+    monkeypatch.setattr(db, "DEFAULT_DB", str(tmp_path / "missing.db"))
+
+    result = runner.invoke(args=["backup-db"])
+
+    assert result.exit_code != 0
+    assert "Database not found" in result.output
+
+
+def test_integrity_check_passes_on_a_healthy_database(runner):
+    result = runner.invoke(args=["integrity-check"])
+
+    assert result.exit_code == 0, result.output
+    assert "Integrity check passed" in result.output
+
+
+def test_integrity_check_fails_on_a_corrupt_file(runner, monkeypatch, tmp_path):
+    corrupt = tmp_path / "corrupt.db"
+    corrupt.write_bytes(b"this is not a sqlite database")
+    monkeypatch.setattr(db, "DEFAULT_DB", str(corrupt))
+
+    result = runner.invoke(args=["integrity-check"])
+
+    assert result.exit_code != 0
+    assert "Integrity check failed" in result.output
+
+
+def test_integrity_check_requires_an_existing_database(
+    runner, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(db, "DEFAULT_DB", str(tmp_path / "missing.db"))
+
+    result = runner.invoke(args=["integrity-check"])
+
+    assert result.exit_code != 0
+    assert "Database not found" in result.output
+
+
+def test_restore_novel_brings_back_a_deleted_row(runner):
+    novel_id = add_novel(name="Comeback")
+    db.soft_delete_novels(novel_id)
+    assert db.get_novel(novel_id) is None
+
+    result = runner.invoke(args=["restore-novel", str(novel_id)])
+
+    assert result.exit_code == 0, result.output
+    assert db.get_novel(novel_id)["name"] == "Comeback"
+
+
+def test_restore_novel_rejects_a_row_that_is_not_deleted(runner):
+    novel_id = add_novel(name="Active")
+
+    result = runner.invoke(args=["restore-novel", str(novel_id)])
+
+    assert result.exit_code != 0
+    assert "is not deleted" in result.output
+
+
+def test_restore_novel_rejects_an_unknown_id(runner):
+    result = runner.invoke(args=["restore-novel", "999999"])
+
+    assert result.exit_code != 0
+    assert "is not deleted" in result.output
+
+
+def test_restore_novel_supports_the_demo_table(runner):
+    novel_id = add_novel(table="demo_novels", name="Demo Book")
+    db.soft_delete_novels(novel_id, table="demo_novels")
+
+    result = runner.invoke(
+        args=["restore-novel", str(novel_id), "--table", "demo_novels"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert db.get_novel(novel_id, table="demo_novels") is not None
+
+
+def test_list_deleted_novels_reports_an_empty_table(runner):
+    result = runner.invoke(args=["list-deleted-novels"])
+
+    assert result.exit_code == 0
+    assert "No deleted novels." in result.output
+
+
+def test_list_deleted_novels_shows_ids_and_titles(runner):
+    novel_id = add_novel(name="Hidden")
+    add_novel(name="Visible")
+    db.soft_delete_novels(novel_id)
+
+    result = runner.invoke(args=["list-deleted-novels"])
+
+    assert result.exit_code == 0
+    assert "Hidden" in result.output
+    assert str(novel_id) in result.output
+    assert "Visible" not in result.output
+
+
+def test_backup_db_reports_a_corrupt_source(runner, monkeypatch, tmp_path):
+    corrupt = tmp_path / "corrupt.db"
+    corrupt.write_bytes(b"this is not a sqlite database")
+    monkeypatch.setattr(db, "DEFAULT_DB", str(corrupt))
+
+    result = runner.invoke(args=["backup-db"])
+
+    assert result.exit_code != 0
+    assert "Backup failed" in result.output
+
+
+def test_a_corrupt_database_still_allows_maintenance_commands(
+    monkeypatch, tmp_path
+):
+    corrupt = tmp_path / "corrupt.db"
+    corrupt.write_bytes(b"this is not a sqlite database")
+    monkeypatch.setattr(db, "DEFAULT_DB", str(corrupt))
+
+    application = create_app()
+    application.config.update(TESTING=True)
+
+    try:
+        assert isinstance(
+            application.extensions["db_init_error"], sqlite3.DatabaseError
+        )
+
+        result = application.test_cli_runner().invoke(args=["integrity-check"])
+
+        assert result.exit_code != 0
+        assert "Integrity check failed" in result.output
+    finally:
+        application.extensions["sync_manager"].executor.shutdown(wait=True)
