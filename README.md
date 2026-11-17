@@ -54,6 +54,30 @@ Configuration is read from the environment:
 `flask --app app.py init-db` is additive: it creates missing tables and
 settings and leaves existing library data untouched.
 
+## Roles
+
+| Role | Read / EPUB | Edit metadata | Delete, cleanup, import, sync, settings |
+| --- | --- | --- | --- |
+| `admin` | yes | yes | yes |
+| `user` | yes | yes | no |
+| `demo` | yes | no | no |
+
+Permissions are enforced by the API; the UI hides actions that would be
+rejected.
+
+## Deployment notes
+
+- Background sync jobs run inside the web process (`ThreadPoolExecutor`), and
+  their snapshots and event streams live in memory. Run a **single** worker
+  process. If you need multiple workers, the job store and event bus must be
+  moved to shared storage first; otherwise a status request may hit a worker
+  that never saw the job.
+- Each job keeps a bounded number of finished snapshots (`SyncManager`),
+  enough for a late status check without unbounded memory growth.
+- SQLite runs in WAL mode. This lets pages and status requests read while a
+  sync writes; it does not make SQLite suitable for many concurrent writers.
+- Serve over HTTPS in production and set `SESSION_COOKIE_SECURE=1`.
+
 ## Why V2?
 
 The first version worked, but as features were added, the codebase became harder to work with.
