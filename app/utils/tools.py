@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 import time
@@ -10,10 +11,11 @@ from threading import Lock
 from typing import Any
 from urllib.parse import urlparse
 
-from curl_cffi import requests
-
 from app.constants import Asset, DefaultValue
+from app.utils import net
 from app.utils.filters import time_difference
+
+logger = logging.getLogger(__name__)
 
 bulk_progress = {
     "total": 0,
@@ -38,7 +40,7 @@ def timer(func):
         start = time.perf_counter()
         result = func(*args, **kwargs)
         end = time.perf_counter()
-        print(f"{func.__name__} took {end - start:.4f} seconds")
+        logger.debug("%s took %.4f seconds", func.__name__, end - start)
         return result
 
     return wrapper
@@ -225,32 +227,21 @@ def http_get(
     headers: dict[str, str] | None = None,
     timeout: int = 10,
 ) -> dict[str, Any]:
-    delay = initial_delay
+    """GET a JSON endpoint with the shared retry policy.
 
-    for attempt in range(1, retries + 1):
-        try:
-            r = requests.get(
-                url,
-                params=params,
-                headers=headers,
-                impersonate="chrome_android",
-                timeout=timeout,
-            )
-            r.raise_for_status()
-            return r.json()
+    Network errors, ``429``, and ``5xx`` responses are retried. Other client
+    errors are raised immediately instead of burning the rate limit.
+    """
 
-        except KeyboardInterrupt:
-            raise
+    response = net.get(
+        url,
+        params=params,
+        headers=headers,
+        timeout=timeout,
+        retries=retries,
+        initial_delay=initial_delay,
+        impersonate="chrome_android",
+    )
+    response.raise_for_status()
 
-        except Exception as exc:
-            print(f"  [WARN] API request failed ({attempt}/{retries}): {exc}")
-
-            if attempt == retries:
-                raise RuntimeError(
-                    f"API request failed after {retries} attempts"
-                ) from exc
-
-            time.sleep(delay)
-            delay *= 2
-
-    raise RuntimeError("Unreachable")
+    return response.json()
