@@ -142,3 +142,15 @@ def test_delete_missing_epub_novels_flags_only_missing_active_rows(monkeypatch):
     assert "SET is_deleted = 1" in captured["query"]
     assert "COALESCE(epub_exists, 0) = 0" in captured["query"]
     assert "COALESCE(is_deleted, 0) = 0" in captured["query"]
+
+
+def test_init_db_enables_wal_mode(monkeypatch, tmp_path):
+    monkeypatch.setattr(db, "DEFAULT_DB", str(tmp_path / "wal.db"))
+
+    db.init_db()
+
+    conn = db.get_conn()
+    try:
+        assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+    finally:
+        conn.close()

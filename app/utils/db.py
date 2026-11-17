@@ -47,6 +47,10 @@ def get_conn(row_factory=False):
     Path(DEFAULT_DB).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DEFAULT_DB)
     conn.execute("PRAGMA busy_timeout = 5000")
+    # WAL is persistent per database file and is enabled in init_db(). NORMAL
+    # sync is the safe companion setting: durable against app crashes, and
+    # fast enough for background sync writes.
+    conn.execute("PRAGMA synchronous = NORMAL")
     if row_factory:
         conn.row_factory = sqlite3.Row
     return conn
@@ -203,6 +207,11 @@ def init_db():
     conn = get_conn()
     try:
         cur = conn.cursor()
+
+        # Allow readers (library pages, SSE status) to keep working while a
+        # background sync writes. The setting is stored in the database file,
+        # so this only takes effect once per database.
+        cur.execute("PRAGMA journal_mode = WAL")
 
         for table in (Default.NOVEL_TABLE, Default.DEMO_NOVEL_TABLE):
             cur.execute(NOVEL_TABLE_SQL.format(table=table))
