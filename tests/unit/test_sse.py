@@ -13,6 +13,13 @@ class FakeExecution:
     def __init__(self, events, done=False):
         self.events = events
         self.done = done
+        self.unsubscribed = False
+
+    def subscribe(self):
+        return self.events
+
+    def unsubscribe(self, queue):
+        self.unsubscribed = True
 
     def snapshot(self):
         return {"done": self.done}

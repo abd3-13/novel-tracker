@@ -30,10 +30,14 @@ class SyncExecution:
 
     error: str | None = None
 
-    events: Queue[SyncEvent | None] = field(default_factory=Queue)
+    # One queue per connected client. Emitted events are broadcast to all of
+    # them, so several tabs can watch the same job without stealing events.
+    subscribers: list[Queue[SyncEvent | None]] = field(default_factory=list)
+    events_closed: bool = False
 
     cancel_event: Event = field(default_factory=Event)
     lock: Lock = field(default_factory=Lock)
+    events_lock: Lock = field(default_factory=Lock)
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -94,17 +98,52 @@ class SyncExecution:
 
     def emit(self, event: SyncEvent):
         """
-        Add an event to the execution event stream.
+        Broadcast an event to every connected client.
         """
 
-        self.events.put(event)
+        with self.events_lock:
+            subscribers = list(self.subscribers)
+
+        for subscriber in subscribers:
+            subscriber.put(event)
+
+    def subscribe(self) -> Queue[SyncEvent | None]:
+        """
+        Register a client and return its private event queue.
+
+        A client that connects after the stream closed receives ``None``
+        immediately, so it can render the final snapshot and disconnect.
+        """
+
+        queue: Queue[SyncEvent | None] = Queue()
+
+        with self.events_lock:
+            if self.events_closed:
+                queue.put(None)
+            else:
+                self.subscribers.append(queue)
+
+        return queue
+
+    def unsubscribe(self, queue: Queue[SyncEvent | None]) -> None:
+        """Remove a disconnected client."""
+
+        with self.events_lock:
+            if queue in self.subscribers:
+                self.subscribers.remove(queue)
 
     def close_events(self):
         """
         Signal that no more events will be emitted.
         """
 
-        self.events.put(None)
+        with self.events_lock:
+            self.events_closed = True
+            subscribers = self.subscribers
+            self.subscribers = []
+
+        for subscriber in subscribers:
+            subscriber.put(None)
 
     # ------------------------------------------------------------------
     # State

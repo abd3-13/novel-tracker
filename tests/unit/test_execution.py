@@ -1,5 +1,6 @@
 import pytest
 
+from app.sync.events import SyncEvent
 from app.sync.execution import SyncExecution
 
 
@@ -66,3 +67,42 @@ def test_execution_snapshot_is_serializable():
     assert snapshot["status"] == "cancelling"
     assert snapshot["done"] is False
     assert snapshot["cancelling"] is True
+
+
+def test_execution_broadcasts_events_to_every_subscriber():
+    execution = SyncExecution()
+
+    first = execution.subscribe()
+    second = execution.subscribe()
+
+    event = SyncEvent(type="field", data={"value": 1})
+    execution.emit(event)
+
+    assert first.get_nowait() is event
+    assert second.get_nowait() is event
+
+    execution.close_events()
+
+    assert first.get_nowait() is None
+    assert second.get_nowait() is None
+    assert execution.subscribers == []
+
+
+def test_execution_late_subscriber_is_closed_immediately():
+    execution = SyncExecution()
+    execution.close_events()
+
+    late = execution.subscribe()
+
+    assert late.get_nowait() is None
+
+
+def test_execution_unsubscribe_removes_the_client():
+    execution = SyncExecution()
+
+    queue = execution.subscribe()
+    execution.emit(SyncEvent(type="field", data={}))
+    execution.unsubscribe(queue)
+    execution.emit(SyncEvent(type="field", data={"second": True}))
+
+    assert queue.qsize() == 1

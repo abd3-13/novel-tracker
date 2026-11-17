@@ -578,37 +578,42 @@ def api_sync_cancel(job_id):
 
 def _sync_event_stream(execution, timeout=15):
     """Yield SSE frames for one synchronization execution."""
-    while True:
-        try:
-            event = execution.events.get(timeout=timeout)
-        except Empty:
-            if execution.done:
+    events = execution.subscribe()
+
+    try:
+        while True:
+            try:
+                event = events.get(timeout=timeout)
+            except Empty:
+                if execution.done:
+                    yield f"event: done\ndata: {json.dumps(execution.snapshot())}\n\n"
+                    break
+
+                yield ": keep-alive\n\n"
+                continue
+
+            # No more events
+            if event is None:
                 yield f"event: done\ndata: {json.dumps(execution.snapshot())}\n\n"
                 break
 
-            yield ": keep-alive\n\n"
-            continue
+            try:
+                data = json.dumps(event.data)
+            except (TypeError, ValueError):
+                current_app.logger.exception(
+                    "Failed to serialize synchronization event '%s'.", event.type
+                )
+                payload = {
+                    "message": "Failed to serialize synchronization event.",
+                    "event": event.type,
+                }
 
-        # No more events
-        if event is None:
-            yield f"event: done\ndata: {json.dumps(execution.snapshot())}\n\n"
-            break
+                yield f"event: error\ndata: {json.dumps(payload)}\n\n"
+                break
 
-        try:
-            data = json.dumps(event.data)
-        except (TypeError, ValueError):
-            current_app.logger.exception(
-                "Failed to serialize synchronization event '%s'.", event.type
-            )
-            payload = {
-                "message": "Failed to serialize synchronization event.",
-                "event": event.type,
-            }
-
-            yield f"event: error\ndata: {json.dumps(payload)}\n\n"
-            break
-
-        yield f"event: {event.type}\ndata: {data}\n\n"
+            yield f"event: {event.type}\ndata: {data}\n\n"
+    finally:
+        execution.unsubscribe(events)
 
 
 @main_bp.route("/api/v1/sync/<job_id>/events", methods=["GET"])
