@@ -127,35 +127,36 @@ def build_library_novel(row, role=AuthRole.USER):
     can_edit = str(role) in {AuthRole.ADMIN, AuthRole.USER}
     can_admin = str(role) == AuthRole.ADMIN
 
-    local_chapters = int(row[3] or 0)
-    online_chapters = int(row[4] or 0)
+    local_chapters = int(row["localchap"] or 0)
+    online_chapters = int(row["onlinechap"] or 0)
 
-    local_characters = int(row[22] or 0)
-    online_characters = int(row[23] or 0)
+    local_characters = int(row["characters"] or 0)
+    online_characters = int(row["online_characters"] or 0)
 
-    epub_exists = bool(row[13])
+    epub_exists = bool(row["epub_exists"])
+    progress = int(row["progress"] or 0)
 
     return {
-        "id": row[0],
-        "title": row[1],
-        "cover": {"url": row[17], "exists": bool(row[17])},
-        "author": row[14] or "",
-        "description": row[15] or "",
-        "tags": row[16] or "",
-        "source": {"name": row[7], "url": row[2]},
-        "status": row[6],
+        "id": row["id"],
+        "title": row["name"],
+        "cover": {"url": row["cover_path"], "exists": bool(row["cover_path"])},
+        "author": row["author"] or "",
+        "description": row["description"] or "",
+        "tags": row["tags"] or "",
+        "source": {"name": row["source"], "url": row["url"]},
+        "status": row["status"],
         "chapters": {
             "local": local_chapters,
             "online": online_chapters,
             "diff": max(0, online_chapters - local_chapters),
-            "latest_title": row[18] or "",
-            "last_online_update": row[5],
-            "last_sync": row[11],
+            "latest_title": row["local_lastchaptitle"] or "",
+            "last_online_update": row["latestchaptime"],
+            "last_sync": row["last_updated"],
         },
         "reading": {
-            "chapter": int(row[20] or 0),
-            "unread": max(0, local_chapters - int(row[20] or 0)),
-            "percent": round(100 * int(row[20] or 0) / local_chapters, 1)
+            "chapter": progress,
+            "unread": max(0, local_chapters - progress),
+            "percent": round(100 * progress / local_chapters, 1)
             if local_chapters
             else 0,
         },
@@ -164,7 +165,11 @@ def build_library_novel(row, role=AuthRole.USER):
             "online": online_characters,
             "new": max(0, online_characters - local_characters),
         },
-        "epub": {"exists": epub_exists, "path": row[9], "last_file": row[19]},
+        "epub": {
+            "exists": epub_exists,
+            "path": row["filepath"],
+            "last_file": row["local_lastchapfile"],
+        },
         "state": {
             "needs_update": online_chapters > local_chapters,
             "missing_epub": not epub_exists,
@@ -179,7 +184,7 @@ def build_library_novel(row, role=AuthRole.USER):
             "can_sync": can_admin,
             "can_import": can_admin,
         },
-        "discord_channel_url": row[24] or "",
+        "discord_channel_url": row["discord_channel_url"] or "",
     }
 
 

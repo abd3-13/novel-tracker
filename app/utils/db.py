@@ -469,7 +469,7 @@ def get_table(user):
         f"{_visibility_filter(user.role)}"
     )
 
-    return fetch_all(query, close=True)
+    return fetch_all(query, close=True, row_factory=True)
 
 
 def insert_novel(data, table=DEFAULT_TABLE):
