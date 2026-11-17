@@ -10,6 +10,7 @@ import { openNovelEdit } from './edit.js';
 import { openNovelReader } from './../views/epub_reader.js';
 import { getNovelCoverSrc } from './../../cover.js';
 
+
 function renderMeta(icon, value, title = '') {
   if (value === null || value === undefined || value === '' || value === 0 || value === '0' || value === '0/0') return '';
 
@@ -333,7 +334,7 @@ export function renderNovelCard(novel, overlayMetadata, coverMode) {
             ${renderTags(novel.tags)}
             <div class="novel-card-actions">
               ${novel.permissions?.can_read ? renderAction('book-2', 'Read', 'read', '', 'data-bs-toggle="modal" data-bs-target="#epub-reader-modal"') : ''}
-              ${renderAction('refresh', 'Sync', 'sync', '', 'data-bs-toggle="offcanvas" data-bs-target="#sync-offcanvas"')}
+              ${novel.permissions?.can_sync ? renderAction('refresh', 'Sync', 'sync', '', 'data-bs-toggle="offcanvas" data-bs-target="#sync-offcanvas"') : ''}
               ${novel.permissions?.can_edit ? renderAction('edit', 'Edit', 'edit') : ''}
               ${novel.permissions?.can_delete ? renderAction('trash', 'Delete', 'delete', 'text-danger') : ''}
               ${hasLinks ? renderAction('link', 'Links', 'links') : ''}

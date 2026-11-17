@@ -3,6 +3,7 @@ import { getSyncRegistry, runSync, cancelSync, listenSyncProgress } from './../a
 import { showNotification } from './../../notifi.js';
 import { SYNC_TEXT, SYNC_BUTTON_STATES, SYNC_CANCEL_BUTTON_STATES } from './../config.js';
 import { escapeHtml } from './../utils.js';
+import { IS_ADMIN } from './../permissions.js';
 // Global state
 const syncConfig = {
   source: 'local',
@@ -66,6 +67,8 @@ function showSyncPanel() {
 }
 
 export function initSyncPanel(library) {
+  if (!IS_ADMIN) return;
+
   renderMetadata();
 
   updateSyncConfig(library);

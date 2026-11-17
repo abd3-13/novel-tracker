@@ -1,4 +1,5 @@
 import { escapeHtml } from './../utils.js';
+import { IS_ADMIN } from './../permissions.js';
 import { listenImportScan, streamImport } from './../api.js';
 import { IMPORT_TEXT } from './../config.js';
 import { buildImportDetail, getSelectedImportMetadataDefinitions } from './import-metadata.js';
@@ -633,7 +634,7 @@ async function submit() {
 export function initImportPanel() {
   const panel = document.getElementById('import-offcanvas');
 
-  if (!panel) return;
+  if (!panel || !IS_ADMIN) return;
 
   setDirectory();
 

@@ -2,12 +2,12 @@ import { escapeHtml } from './../utils.js';
 import { saveSetting } from './../api.js';
 import { CARD_METADATA } from './card-metadata.js';
 import { IMPORT_METADATA, getSelectedImportMetadata, saveSelectedImportMetadata } from './import-metadata.js';
+import { IS_ADMIN } from './../permissions.js';
 
 const OVERLAY_STORAGE_KEY = 'library.cardOverlayMetadata';
 
 // Only administrators may change library-wide settings. Everyone else keeps
 // the per-browser options (card size, overlay, import rows).
-const IS_ADMIN = window.libraryUser?.role === 'admin';
 
 const CARD_SIZE_STORAGE_KEY = 'library.cardSize';
 const DEFAULT_CARD_SIZE = 150;

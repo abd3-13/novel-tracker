@@ -8,6 +8,7 @@ import {
 } from './selection.js';
 import { library, getLibrarySyncIds } from './../state.js';
 import { TOOLBAR_TEXT, SELECTION_TEXT } from './../config.js';
+import { IS_ADMIN } from './../permissions.js';
 
 function renderSortMenu(sort) {
   return SORT_OPTIONS.map(
@@ -66,7 +67,7 @@ export function bindToolbar(onSearch, onSort) {
 
   library.onSelectionChange = updateSyncActionCount;
 
-  document.getElementById('toolbar-select').addEventListener('click', () => {
+  document.getElementById('toolbar-select')?.addEventListener('click', () => {
     library.selectionMode = true;
     updateSelectionBar(library);
     updateSyncActionCount();
@@ -129,7 +130,7 @@ export function renderToolbar(library) {
           <button id="library-sort-button" class="btn btn-outline-secondary" data-bs-toggle="dropdown"><i class="ti ti-${library.sort.icon} me-1"></i><span class="d-none d-md-inline">${TOOLBAR_TEXT.sort}: ${library.sort.label}</span></button>
           <div class="dropdown-menu" id="sort-dropdown-menu">${renderSortMenu(library.sort)}</div>
         </div>
-        <div class="col-auto">
+        ${IS_ADMIN ? `<div class="col-auto">
           <div class="dropdown">
             <button id="toolbar-actions" class="btn btn-outline-secondary" data-bs-toggle="dropdown" aria-expanded="false" title="${TOOLBAR_TEXT.actions}"><i class="ti ti-dots-vertical"></i><span class="d-none d-md-inline ms-1">${TOOLBAR_TEXT.actions}</span></button>
             <div class="dropdown-menu dropdown-menu-end">
@@ -140,7 +141,7 @@ export function renderToolbar(library) {
               <button type="button" id="toolbar-select" class="dropdown-item"><i class="ti ti-checkbox me-2"></i>${TOOLBAR_TEXT.select}</button>
             </div>
           </div>
-        </div>
+        </div>` : ''}
       </div>
       <div id="library-selection-bar" class="mt-2 d-none">
             <div class="card">

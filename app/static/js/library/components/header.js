@@ -1,6 +1,7 @@
 // components/header.js
 import { deleteMissingEpubs } from './../api.js';
 import { escapeHtml } from './../utils.js';
+import { IS_ADMIN } from './../permissions.js';
 
 function showMissingEpubDialog(missingNovels) {
   const count = missingNovels.length;
@@ -144,7 +145,7 @@ export function renderHeader(library) {
       <div class="row align-items-center">
         <div class="col">
           <h2 class="page-title mb-1">Library<div id="tile_server_stat"><span class="status status-red"><span class="status-dot status-dot-animated"></span> Server</span></div></h2>
-          <div class="text-secondary"><span>${library.stats.total} Novels</span><span class="mx-2">•</span><span>${library.stats.filter} Filtered</span><span class="mx-2">•</span><span>${library.stats.updates} Updates</span>${missingEpub > 0 ? `<span class="mx-2">•</span><button type="button" id="library-missing-epub" class="library-missing-epub" title="Clean up records whose EPUB file is missing"><i class="ti ti-file-alert me-1"></i>${missingEpub} Missing EPUB</button>` : ''}</div>
+          <div class="text-secondary"><span>${library.stats.total} Novels</span><span class="mx-2">•</span><span>${library.stats.filter} Filtered</span><span class="mx-2">•</span><span>${library.stats.updates} Updates</span>${missingEpub > 0 && IS_ADMIN ? `<span class="mx-2">•</span><button type="button" id="library-missing-epub" class="library-missing-epub" title="Clean up records whose EPUB file is missing"><i class="ti ti-file-alert me-1"></i>${missingEpub} Missing EPUB</button>` : ''}</div>
         </div>
         <div class="col-auto">
           <div class="d-flex align-items-center gap-2">
