@@ -13,7 +13,7 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
-from app.constants import AuthRole, Default
+from app.constants import AuthRole
 from app.importer.importer import import_files, iter_import_files
 from app.importer.scanner import iter_scan_library, scan_library
 from app.sync.services import get_epub_cover_bytes
@@ -23,16 +23,16 @@ import_bp = Blueprint("importing", __name__)
 
 
 def _import_table():
-    """Return the writable table for the current user, or None if not allowed."""
-    if current_user.role == AuthRole.DEMO:
+    """Return the writable table for the current user, or None if not allowed.
+
+    Importing writes new rows and reads the server's EPUB directory, so it is
+    restricted to administrators. Regular users and the demo account cannot
+    import.
+    """
+    if str(current_user.role) != AuthRole.ADMIN:
         return None
 
-    table = db.get_user_table(current_user)
-
-    if table == Default.DEMO_NOVEL_TABLE:
-        return None
-
-    return table
+    return db.get_user_table(current_user)
 
 
 def _forbidden():

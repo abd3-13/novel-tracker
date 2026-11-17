@@ -39,6 +39,7 @@ class AuthMessage(StrEnum):
     ACCOUNT_DISABLED_TITLE = "Account Disabled"
     ACCOUNT_DISABLED = "Your account has been disabled."
     ADMIN_REQUIRED = "Administrator access required."
+    EDIT_FORBIDDEN = "Editing is not available for this account."
 
 
 class AuthCategory(StrEnum):

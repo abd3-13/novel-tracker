@@ -15,7 +15,7 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
-from app.auth import admin_required
+from app.auth import admin_required, editor_required
 from app.constants import (
     SENSITIVE_SETTING_KEYS,
     SETTING_METADATA,
@@ -122,7 +122,11 @@ def validate_novel_updates(payload):
     return updates
 
 
-def build_library_novel(row):
+def build_library_novel(row, role=AuthRole.USER):
+    """Shape one database row for the library API, including permissions."""
+    can_edit = str(role) in {AuthRole.ADMIN, AuthRole.USER}
+    can_admin = str(role) == AuthRole.ADMIN
+
     local_chapters = int(row[3] or 0)
     online_chapters = int(row[4] or 0)
 
@@ -169,9 +173,11 @@ def build_library_novel(row):
         },
         "permissions": {
             "can_read": epub_exists,
-            "can_update": True,
-            "can_edit": True,
-            "can_delete": True,
+            "can_update": can_edit,
+            "can_edit": can_edit,
+            "can_delete": can_admin,
+            "can_sync": can_admin,
+            "can_import": can_admin,
         },
         "discord_channel_url": row[24] or "",
     }
@@ -203,13 +209,15 @@ def api_library():
 
     rows = db.get_table(current_user)
 
-    library = [build_library_novel(row) for row in rows]
+    library = [
+        build_library_novel(row, current_user.role) for row in rows
+    ]
 
     return jsonify({"data": library})
 
 
 @main_bp.route("/api/v1/library/missing-epub", methods=["DELETE"])
-@login_required
+@admin_required
 def api_delete_missing_epubs():
     table = db.get_user_table(current_user)
 
@@ -242,50 +250,75 @@ def api_delete_missing_epubs():
     )
 
 
-@main_bp.route("/api/v1/library/<int:novel_id>", methods=["GET", "PATCH", "DELETE"])
+def _library_novel(novel_id):
+    """Return the writable table and the visible novel row (or ``None``)."""
+    table = db.get_user_table(current_user)
+
+    return table, db.get_novel(novel_id, table=table, user=current_user)
+
+
+def _novel_not_found(novel_id):
+    return jsonify(
+        {
+            "success": False,
+            "message": f"Novel with ID {novel_id} was not found.",
+            "category": "warning",
+        }
+    ), 404
+
+
+@main_bp.get("/api/v1/library/<int:novel_id>")
 @login_required
 def api_library_novel(novel_id):
-    table = db.get_user_table(current_user)
-    row = db.get_novel(novel_id, table=table, user=current_user)
+    _, row = _library_novel(novel_id)
 
     if row is None:
+        return _novel_not_found(novel_id)
+
+    return jsonify(
+        {
+            "success": True,
+            "data": dict(row),
+        }
+    )
+
+
+@main_bp.delete("/api/v1/library/<int:novel_id>")
+@admin_required
+def api_delete_library_novel(novel_id):
+    table, row = _library_novel(novel_id)
+
+    if row is None:
+        return _novel_not_found(novel_id)
+
+    try:
+        db.delete_novels(novel_id, table=table)
+    except Exception as e:
+        current_app.logger.error(f"Failed to delete novel with ID {novel_id}: {e!s}")
         return jsonify(
             {
                 "success": False,
-                "message": f"Novel with ID {novel_id} was not found.",
-                "category": "warning",
+                "message": f"Failed to delete novel with ID {novel_id}. {e!s}",
+                "category": "error",
             }
-        ), 404
+        ), 500
 
-    if request.method == "GET":
-        return jsonify(
-            {
-                "success": True,
-                "data": dict(row),
-            }
-        )
-    if request.method == "DELETE":
-        try:
-            db.delete_novels(novel_id, table=table)
-        except Exception as e:
-            current_app.logger.error(
-                f"Failed to delete novel with ID {novel_id}: {e!s}"
-            )
-            return jsonify(
-                {
-                    "success": False,
-                    "message": f"Failed to delete novel with ID {novel_id}. {e!s}",
-                    "category": "error",
-                }
-            ), 500
+    return jsonify(
+        {
+            "success": True,
+            "message": f"Novel with ID {novel_id} deleted.",
+            "category": "success",
+        }
+    )
 
-        return jsonify(
-            {
-                "success": True,
-                "message": f"Novel with ID {novel_id} deleted.",
-                "category": "success",
-            }
-        )
+
+@main_bp.patch("/api/v1/library/<int:novel_id>")
+@editor_required
+def api_update_library_novel(novel_id):
+    table, row = _library_novel(novel_id)
+
+    if row is None:
+        return _novel_not_found(novel_id)
 
     payload = request.get_json(silent=True)
 
@@ -434,7 +467,7 @@ def api_sync_registry():
 
 
 @main_bp.route("/api/v1/sync", methods=["POST"])
-@login_required
+@admin_required
 def api_sync():
     try:
         data = request.get_json(silent=True)
@@ -508,7 +541,7 @@ def api_sync_status(job_id):
 
 
 @main_bp.route("/api/v1/sync/<job_id>/cancel", methods=["POST"])
-@login_required
+@admin_required
 def api_sync_cancel(job_id):
     sync_manager = current_app.extensions["sync_manager"]
 

@@ -75,32 +75,48 @@ def safe_next_url(target):
     return target
 
 
-def admin_required(view):
-    """Require an authenticated administrator for a JSON endpoint."""
+def roles_required(*roles, message=AuthMessage.ADMIN_REQUIRED):
+    """Require one of ``roles`` for a JSON endpoint."""
 
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        if not current_user.is_authenticated:
-            return jsonify(
-                {
-                    AuthResponseKey.SUCCESS: False,
-                    AuthResponseKey.MESSAGE: AuthMessage.AUTH_FAILED_TITLE,
-                    AuthResponseKey.CATEGORY: AuthCategory.ERROR,
-                }
-            ), 401
+    allowed = {str(role) for role in roles}
 
-        if current_user.role != AuthRole.ADMIN:
-            return jsonify(
-                {
-                    AuthResponseKey.SUCCESS: False,
-                    AuthResponseKey.MESSAGE: AuthMessage.ADMIN_REQUIRED,
-                    AuthResponseKey.CATEGORY: AuthCategory.ERROR,
-                }
-            ), 403
+    def decorator(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if not current_user.is_authenticated:
+                return jsonify(
+                    {
+                        AuthResponseKey.SUCCESS: False,
+                        AuthResponseKey.MESSAGE: AuthMessage.AUTH_FAILED_TITLE,
+                        AuthResponseKey.CATEGORY: AuthCategory.ERROR,
+                    }
+                ), 401
 
-        return view(*args, **kwargs)
+            if str(current_user.role) not in allowed:
+                return jsonify(
+                    {
+                        AuthResponseKey.SUCCESS: False,
+                        AuthResponseKey.MESSAGE: message,
+                        AuthResponseKey.CATEGORY: AuthCategory.ERROR,
+                    }
+                ), 403
 
-    return wrapped
+            return view(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
+
+
+admin_required = roles_required(AuthRole.ADMIN)
+
+# Administrators and regular users may change novel metadata. The demo
+# account is read-only.
+editor_required = roles_required(
+    AuthRole.ADMIN,
+    AuthRole.USER,
+    message=AuthMessage.EDIT_FORBIDDEN,
+)
 
 
 @auth_bp.get("/login")
