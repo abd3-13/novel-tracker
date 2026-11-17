@@ -8,9 +8,13 @@ from .runner import SyncRunner
 class SyncManager:
     """
     Manages background synchronization executions.
+
+    Finished executions are kept briefly so late status/event requests can
+    still read their snapshot. ``max_finished`` bounds that retention so a
+    long-running server does not grow without limit.
     """
 
-    def __init__(self, max_workers=2):
+    def __init__(self, max_workers=2, max_finished=20):
         self.executor = ThreadPoolExecutor(
             max_workers=max_workers,
             thread_name_prefix="sync",
@@ -18,6 +22,7 @@ class SyncManager:
 
         self.executions = {}
         self.lock = Lock()
+        self.max_finished = max_finished
 
     # ------------------------------------------------------------------
     # Public API
@@ -43,6 +48,24 @@ class SyncManager:
         )
 
         return execution
+
+    def _prune_finished(self):
+        """
+        Drop the oldest finished executions beyond ``max_finished``.
+
+        Running jobs are never removed. Callers hold ``self.lock``.
+        """
+
+        finished = [e for e in self.executions.values() if e.done]
+        excess = len(finished) - self.max_finished
+
+        if excess <= 0:
+            return
+
+        finished.sort(key=lambda execution: execution.end_time or 0)
+
+        for execution in finished[:excess]:
+            self.executions.pop(execution.job_id, None)
 
     def get(self, job_id):
         """
@@ -78,6 +101,9 @@ class SyncManager:
 
         finally:
             execution.close_events()
+
+            with self.lock:
+                self._prune_finished()
 
     def cancel(self, job_id):
         """

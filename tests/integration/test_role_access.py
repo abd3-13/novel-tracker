@@ -147,7 +147,7 @@ def test_admin_can_delete_and_start_sync(client):
 
     response = client.post(
         "/api/v1/sync",
-        json={"novels": [], "fields": []},
+        json={"novels": [999999], "fields": []},
         headers=headers,
     )
     assert response.status_code == 202
