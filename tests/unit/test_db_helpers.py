@@ -154,3 +154,88 @@ def test_init_db_enables_wal_mode(monkeypatch, tmp_path):
         assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
     finally:
         conn.close()
+
+
+@pytest.mark.parametrize(
+    "ids",
+    (
+        [],
+        (),
+        "1,2",
+        None,
+        0,
+        -1,
+        True,
+        [True],
+        [0],
+        [-1],
+        [1.5],
+        ["1"],
+        [None],
+    ),
+)
+def test_soft_delete_novels_rejects_invalid_ids(ids):
+    with pytest.raises(ValueError):
+        db.soft_delete_novels(ids)
+
+
+def test_soft_delete_novels_parameterizes_ids(monkeypatch):
+    captured = {}
+
+    class Cursor:
+        rowcount = 2
+
+    def fake_execute(query, params=(), **kwargs):
+        captured["query"] = query
+        captured["params"] = params
+        return Cursor(), None
+
+    monkeypatch.setattr(db, "execute", fake_execute)
+
+    assert db.soft_delete_novels([4, 7, 4], "novels") == 2
+    assert "SET is_deleted = 1" in captured["query"]
+    assert "id IN (?, ?)" in captured["query"]
+    assert "COALESCE(is_deleted, 0) = 0" in captured["query"]
+    assert captured["params"] == (4, 7)
+
+
+def test_soft_delete_novels_reports_zero_for_absent_rows(monkeypatch):
+    class Cursor:
+        rowcount = 0
+
+    monkeypatch.setattr(
+        db, "execute", lambda *args, **kwargs: (Cursor(), None)
+    )
+
+    assert db.soft_delete_novels(9, "novels") == 0
+
+
+
+def test_restore_novel_only_touches_deleted_rows(monkeypatch):
+    captured = {}
+
+    class Cursor:
+        rowcount = 1
+
+    def fake_execute(query, params=(), **kwargs):
+        captured["query"] = query
+        captured["params"] = params
+        return Cursor(), None
+
+    monkeypatch.setattr(db, "execute", fake_execute)
+
+    assert db.restore_novel(5, table="novels") is True
+    assert "SET is_deleted = 0" in captured["query"]
+    assert "COALESCE(is_deleted, 0) = 1" in captured["query"]
+    assert captured["params"] == (5,)
+
+
+def test_restore_novel_returns_false_when_nothing_changed(monkeypatch):
+    class Cursor:
+        rowcount = 0
+
+    monkeypatch.setattr(
+        db, "execute", lambda *args, **kwargs: (Cursor(), None)
+    )
+
+    assert db.restore_novel(5) is False

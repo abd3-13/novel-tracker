@@ -446,7 +446,7 @@ def test_patch_updates_and_returns_the_novel(client):
     assert data["notes"] == "note"
 
 
-def test_delete_removes_the_novel_for_an_admin(client):
+def test_delete_flags_the_novel_as_deleted(client):
     novel_id = add_novel()
     login_ok(client, "boss")
 
@@ -457,6 +457,9 @@ def test_delete_removes_the_novel_for_an_admin(client):
 
     assert response.status_code == 200
     assert db.get_novel(novel_id) is None
+
+    row = db.fetch_one("SELECT is_deleted FROM novels WHERE id = ?", (novel_id,))
+    assert row[0] == 1
 
 
 def test_missing_epub_cleanup_flags_rows(client):

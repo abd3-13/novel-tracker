@@ -502,17 +502,87 @@ def update_novel(novel_id, updates, table=DEFAULT_TABLE):
     return True
 
 
-def delete_novels(ids, table=DEFAULT_TABLE):
+def _normalize_novel_ids(ids):
     """
-    Delete multiple novels.
+    Validate and de-duplicate novel IDs before they reach a query.
+
+    Raises
+    ------
+    ValueError
+      When no IDs are supplied or any ID is not a positive integer.
+    """
+    if isinstance(ids, bool):
+        raise ValueError("Novel IDs must be positive integers.")
+
+    if isinstance(ids, int):
+        ids = [ids]
+
+    try:
+        candidates = list(ids)
+    except TypeError:
+        raise ValueError("Novel IDs must be positive integers.") from None
+
+    novel_ids = []
+
+    for value in candidates:
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ValueError("Novel IDs must be positive integers.")
+
+        if value not in novel_ids:
+            novel_ids.append(value)
+
+    if not novel_ids:
+        raise ValueError("No novel IDs were provided.")
+
+    return novel_ids
+
+
+def soft_delete_novels(ids, table=DEFAULT_TABLE):
+    """
+    Flag novels as deleted without removing their rows.
+
+    The rows stay in the database, are hidden from every read path, and are
+    restored when the same title is imported again.
     Parameters
     ----------
     ids
-      Comma-separated SQL ids.
-      Example:
-        "1,2,3"
+      A novel ID or an iterable of novel IDs.
+    Returns
+    -------
+    int
+      Number of rows newly flagged in this call.
     """
-    execute(f"DELETE FROM {table} WHERE id IN ({ids})", commit=True, close=True)
+    novel_ids = _normalize_novel_ids(ids)
+    placeholders = ", ".join("?" for _ in novel_ids)
+
+    cur, _ = execute(
+        f"UPDATE {table} SET is_deleted = 1 "
+        f"WHERE id IN ({placeholders}) AND COALESCE(is_deleted, 0) = 0",
+        tuple(novel_ids),
+        commit=True,
+        close=True,
+    )
+
+    return max(cur.rowcount, 0)
+
+
+def restore_novel(novel_id, table=DEFAULT_TABLE):
+    """
+    Clear the soft-delete flag on a novel.
+    Returns
+    -------
+    bool
+      True when a deleted row was restored, False otherwise.
+    """
+    cur, _ = execute(
+        f"UPDATE {table} SET is_deleted = 0 "
+        "WHERE id = ? AND COALESCE(is_deleted, 0) = 1",
+        (novel_id,),
+        commit=True,
+        close=True,
+    )
+
+    return cur.rowcount > 0
 
 
 def delete_missing_epub_novels(table=DEFAULT_TABLE):

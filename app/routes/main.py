@@ -298,7 +298,7 @@ def api_delete_library_novel(novel_id):
         return _novel_not_found(novel_id)
 
     try:
-        db.delete_novels(novel_id, table=table)
+        db.soft_delete_novels(novel_id, table=table)
     except Exception as e:
         current_app.logger.error(f"Failed to delete novel with ID {novel_id}: {e!s}")
         return jsonify(
