@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import requests
+from curl_cffi import requests
 
 from app.constants import (
     DefaultValue,
@@ -18,7 +18,7 @@ from app.constants import (
     WebnovelHeader,
     WebnovelJsonKey,
 )
-from app.utils import db
+from app.utils import db, net
 from app.utils.images import convert_to_webp, download_image
 from app.utils.tools import (
     determine_status,
@@ -92,7 +92,9 @@ class CharacterInfo:
 
 class WebnovelClient:
     def __init__(self) -> None:
-        self.session = requests.Session()
+        # One impersonating session keeps the browser fingerprint consistent
+        # across requests; WebNovel rejects some plain HTTP clients.
+        self.session = requests.Session(impersonate="chrome_android")
 
     def extract_book_id(self, url: str) -> str | None:
         for pattern in BOOK_ID_PATTERNS:
@@ -114,10 +116,18 @@ class WebnovelClient:
             )
         )
 
-        response = self.session.get(
-            endpoint, headers=_client_headers(), timeout=_max_timeout()
-        )
-        response.raise_for_status()
+        try:
+            response = net.get(
+                endpoint,
+                headers=_client_headers(),
+                timeout=_max_timeout(),
+                session=self.session,
+            )
+            response.raise_for_status()
+        except Exception as exc:  # noqa: BLE001
+            raise NetworkError(
+                f"Could not fetch WebNovel data for book {book_id}: {exc}"
+            ) from exc
 
         data = response.json().get(WebnovelJsonKey.DATA)
         if not data:
